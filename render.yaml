@@ -34,7 +34,6 @@ services:
     name: algotrading-frontend
     env: static
     plan: free
-    region: oregon
     rootDir: frontend
     buildCommand: |
       npm ci
