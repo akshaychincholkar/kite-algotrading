@@ -33,7 +33,7 @@ services:
   - type: web
     name: algotrading-frontend
     env: static
-    plan: free
+    plan: starter
     rootDir: frontend
     buildCommand: |
       npm ci
