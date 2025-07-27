@@ -1,5 +1,5 @@
-from algotrader.backend.trading.models.user import User
-from algotrader.backend.trading.models.screener import Screener
+from backend.backend.trading.models.user import User
+from backend.backend.trading.models.screener import Screener
 class ScreenerUtils:
     @staticmethod
     def print_user_name_by_id(user_id):

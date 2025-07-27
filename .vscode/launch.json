@@ -4,17 +4,225 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
-            "name": "Run",
+            "name": "Django Backend Server",
             "type": "debugpy",
             "request": "launch",
             "args": [
-                "runserver"
+                "runserver",
+                "0.0.0.0:8000"
             ],
             "django": true,
             "autoStartBrowser": false,
-            "program": "${workspaceFolder}\\manage.py"
+            "program": "${workspaceFolder}\\manage.py",
+            "python": "${workspaceFolder}\\venv\\Scripts\\python.exe",
+            "envFile": "${workspaceFolder}/.env.development",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "backend.settings",
+                "DEBUG": "True",
+                "ALLOWED_HOSTS": "localhost,127.0.0.1,0.0.0.0",
+                "CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173",
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Django Backend Server (Production Mode)",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "runserver",
+                "0.0.0.0:8000"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}\\manage.py",
+            "envFile": "${workspaceFolder}/.env.prod.example",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "backend.settings",
+                "DEBUG": "False",
+                "ALLOWED_HOSTS": ".onrender.com,algotrading-backend.onrender.com,localhost,127.0.0.1",
+                "CORS_ALLOWED_ORIGINS": "https://algotrading-frontend.onrender.com,http://localhost:3000,http://localhost:5173",
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Django Migrate",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "migrate"
+            ],
+            "django": true,
+            "program": "${workspaceFolder}\\manage.py",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "backend.settings",
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Django Collectstatic",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "collectstatic",
+                "--noinput"
+            ],
+            "django": true,
+            "program": "${workspaceFolder}\\manage.py",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "backend.settings",
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Django Shell",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "shell"
+            ],
+            "django": true,
+            "program": "${workspaceFolder}\\manage.py",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "backend.settings",
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "AlgoTrader Django Server",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "runserver",
+                "0.0.0.0:8001"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}\\backend\\manage.py",
+            "python": "${workspaceFolder}\\venv\\Scripts\\python.exe",
+            "envFile": "${workspaceFolder}/.env.development",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
+                "DEBUG": "True",
+                "ALLOWED_HOSTS": "localhost,127.0.0.1,0.0.0.0",
+                "CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173",
+                "PYTHONPATH": "${workspaceFolder}\\backend"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}\\backend"
+        },
+        {
+            "name": "AlgoTrader Django Server (Production Mode)",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "runserver",
+                "0.0.0.0:8001"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}\\backend\\manage.py",
+            "envFile": "${workspaceFolder}/.env.prod.example",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
+                "DEBUG": "False",
+                "ALLOWED_HOSTS": ".onrender.com,algotrader-backend.onrender.com,localhost,127.0.0.1",
+                "CORS_ALLOWED_ORIGINS": "https://algotrader-frontend.onrender.com,http://localhost:3000,http://localhost:5173",
+                "PYTHONPATH": "${workspaceFolder}\\backend"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}\\backend"
+        },
+        {
+            "name": "AlgoTrader Django Migrate",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "migrate"
+            ],
+            "django": true,
+            "program": "${workspaceFolder}\\backend\\manage.py",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
+                "PYTHONPATH": "${workspaceFolder}\\backend"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}\\backend"
+        },
+        {
+            "name": "AlgoTrader Django Makemigrations",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "makemigrations"
+            ],
+            "django": true,
+            "program": "${workspaceFolder}\\backend\\manage.py",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
+                "PYTHONPATH": "${workspaceFolder}\\backend"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}\\backend"
+        },
+        {
+            "name": "AlgoTrader Django Shell",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "shell"
+            ],
+            "django": true,
+            "program": "${workspaceFolder}\\backend\\manage.py",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
+                "PYTHONPATH": "${workspaceFolder}\\backend"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}\\backend"
+        },
+        {
+            "name": "AlgoTrader Django Collectstatic",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "collectstatic",
+                "--noinput"
+            ],
+            "django": true,
+            "program": "${workspaceFolder}\\backend\\manage.py",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
+                "PYTHONPATH": "${workspaceFolder}\\backend"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}\\backend"
+        },
+        {
+            "name": "AlgoTrader Django Create Superuser",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "createsuperuser"
+            ],
+            "django": true,
+            "program": "${workspaceFolder}\\backend\\manage.py",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
+                "PYTHONPATH": "${workspaceFolder}\\backend"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}\\backend"
         }
     ]
 }
