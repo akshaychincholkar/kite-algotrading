@@ -6,6 +6,10 @@ asgiref==3.8.1
 sqlparse==0.5.1
 tzdata==2023.3
 
+# Environment and configuration
+python-dotenv==1.1.0
+dj-database-url==2.1.0
+
 # HTTP requests and API
 requests==2.32.3
 urllib3==2.5.0
