@@ -5,7 +5,7 @@ services:
     env: python
     plan: free
     region: oregon
-    runtime: python-3.12
+    runtime: python-3.11
     rootDir: backend
     buildCommand: |
       pip install --upgrade pip
