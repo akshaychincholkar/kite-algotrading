@@ -12,6 +12,16 @@ from django.views.decorators.http import require_GET, require_POST
 import json
 from .utils.chartink_screener import fetch_chartink_screener
 from .utils.kite_transaction_manager import place_market_order
+from django.utils import timezone
+
+@api_view(['GET'])
+def health_check(request):
+    """Health check endpoint for deployment monitoring"""
+    return Response({
+        'status': 'healthy',
+        'message': 'Django application is running',
+        'timestamp': str(timezone.now())
+    }, status=200)
 
 @api_view(['GET', 'PUT', 'DELETE'])
 def trade_detail(request, pk):

@@ -1,6 +1,6 @@
 from django.urls import path, include
 from . import views
-from .views import trades, global_parameters, trade_detail
+from .views import trades, global_parameters, trade_detail, health_check
 from .utils.generate_token_api import generate_token,check_token
 from .utils.kite_authenticator import register_user, get_all_users, set_logged_in_user
 from .views_user_roi import user_roi
@@ -8,6 +8,7 @@ from .screener_api import screener
 from .views import stocks_by_screener, buy_stock
 
 urlpatterns = [
+    path('health/', health_check, name='health_check'),
     path('trades/', views.trades, name='trades'),
     path('trades/<int:pk>/', views.trade_detail, name='trade_detail'),
     path('globalparameters/', global_parameters, name='global_parameters'),
