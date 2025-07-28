@@ -11,5 +11,8 @@ class Screener(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     last_run = models.DateField(null=True, blank=True)
 
+    class Meta:
+        app_label = 'trading'
+
     def __str__(self):
         return self.screener_name

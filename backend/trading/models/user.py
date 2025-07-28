@@ -6,5 +6,8 @@ class User(models.Model):
     user_id = models.CharField(max_length=20)
     email = models.EmailField()
 
+    class Meta:
+        app_label = 'trading'
+
     def __str__(self):
         return f"{self.user_name} ({self.email})"

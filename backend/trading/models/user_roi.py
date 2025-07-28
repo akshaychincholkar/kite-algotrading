@@ -21,13 +21,7 @@ class UserRoi(models.Model):
     total_percert_gain = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
 
     class Meta:
-        verbose_name = "User ROI"
-        verbose_name_plural = "User ROIs"
-
-    def __str__(self):
-        return f"ROI for {self.user}"
-
-    class Meta:
+        app_label = 'trading'
         verbose_name = "User ROI"
         verbose_name_plural = "User ROIs"
 

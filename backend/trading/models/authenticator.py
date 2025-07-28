@@ -7,5 +7,8 @@ class Authenticator(models.Model):
     access_token = models.TextField(blank=True)
     last_login = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        app_label = 'trading'
+
     def __str__(self):
         return f"{self.user.email_id} - {self.last_login}"

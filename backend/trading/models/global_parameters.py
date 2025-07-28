@@ -5,5 +5,9 @@ class GlobalParameters(models.Model):
     # For example, you can store API keys, thresholds, or other configuration settings  
     key = models.TextField(max_length=250, primary_key=True)
     value = models.TextField(max_length=512, blank=True, null=True)
+    
+    class Meta:
+        app_label = 'trading'
+    
     def __str__(self):
         return f"{self.key} - {self.value}"

@@ -25,5 +25,8 @@ class Trade(models.Model):
     tenure = models.IntegerField(null=True, blank=True)
     remarks = models.TextField(blank=True, null=True)
 
+    class Meta:
+        app_label = 'trading'
+
     def __str__(self):
         return f"Trade {self.id} - {self.stock} by {self.user.email_id} on {self.entry_date}"
