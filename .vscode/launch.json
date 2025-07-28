@@ -5,6 +5,24 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Simple Django Server",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "runserver"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}\\backend\\manage.py",
+            "envFile": "${workspaceFolder}/.env.development",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
+                "PYTHONPATH": "${workspaceFolder}\\backend"
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}\\backend"
+        },
+        {
             "name": "Django Backend Server",
             "type": "debugpy",
             "request": "launch",
@@ -14,18 +32,18 @@
             ],
             "django": true,
             "autoStartBrowser": false,
-            "program": "${workspaceFolder}\\manage.py",
-            "python": "${workspaceFolder}\\venv\\Scripts\\python.exe",
+            "program": "${workspaceFolder}\\backend\\manage.py",
+            "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "envFile": "${workspaceFolder}/.env.development",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "backend.settings",
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
                 "DEBUG": "True",
                 "ALLOWED_HOSTS": "localhost,127.0.0.1,0.0.0.0",
                 "CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173",
-                "PYTHONPATH": "${workspaceFolder}"
+                "PYTHONPATH": "${workspaceFolder}\\backend"
             },
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}\\backend"
         },
         {
             "name": "Django Backend Server (Production Mode)",
@@ -37,17 +55,17 @@
             ],
             "django": true,
             "autoStartBrowser": false,
-            "program": "${workspaceFolder}\\manage.py",
+            "program": "${workspaceFolder}\\backend\\manage.py",
             "envFile": "${workspaceFolder}/.env.prod.example",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "backend.settings",
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
                 "DEBUG": "False",
                 "ALLOWED_HOSTS": ".onrender.com,algotrading-backend.onrender.com,localhost,127.0.0.1",
                 "CORS_ALLOWED_ORIGINS": "https://algotrading-frontend.onrender.com,http://localhost:3000,http://localhost:5173",
-                "PYTHONPATH": "${workspaceFolder}"
+                "PYTHONPATH": "${workspaceFolder}\\backend"
             },
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}\\backend"
         },
         {
             "name": "Django Migrate",
@@ -57,13 +75,13 @@
                 "migrate"
             ],
             "django": true,
-            "program": "${workspaceFolder}\\manage.py",
+            "program": "${workspaceFolder}\\backend\\manage.py",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "backend.settings",
-                "PYTHONPATH": "${workspaceFolder}"
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
+                "PYTHONPATH": "${workspaceFolder}\\backend"
             },
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}\\backend"
         },
         {
             "name": "Django Collectstatic",
@@ -74,13 +92,13 @@
                 "--noinput"
             ],
             "django": true,
-            "program": "${workspaceFolder}\\manage.py",
+            "program": "${workspaceFolder}\\backend\\manage.py",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "backend.settings",
-                "PYTHONPATH": "${workspaceFolder}"
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
+                "PYTHONPATH": "${workspaceFolder}\\backend"
             },
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}\\backend"
         },
         {
             "name": "Django Shell",
@@ -90,13 +108,13 @@
                 "shell"
             ],
             "django": true,
-            "program": "${workspaceFolder}\\manage.py",
+            "program": "${workspaceFolder}\\backend\\manage.py",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "backend.settings",
-                "PYTHONPATH": "${workspaceFolder}"
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
+                "PYTHONPATH": "${workspaceFolder}\\backend"
             },
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}\\backend"
         },
         {
             "name": "AlgoTrader Django Server",
@@ -109,7 +127,7 @@
             "django": true,
             "autoStartBrowser": false,
             "program": "${workspaceFolder}\\backend\\manage.py",
-            "python": "${workspaceFolder}\\venv\\Scripts\\python.exe",
+            "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "envFile": "${workspaceFolder}/.env.development",
             "env": {
                 "DJANGO_SETTINGS_MODULE": "algotrader.settings",
