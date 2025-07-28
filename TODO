@@ -15,6 +15,7 @@ Todo:
     ✔ TODO: Refine the entire trade UI and registration UI. @done(25-07-26 02:31)
     ✔ TODO: Add Hello Username to the top of the page @started(25-07-26 03:30) @done(25-07-26 03:57) @lasted(27m6s)
     ✔ TODO: settings page polishing @started(25-07-26 20:06) @done(25-07-26 20:06) @lasted(56s)
+    ☐ TODO: Mobile responsiveness for the entire UI
 
   ☐ Features
     ☐ TODO: Add the monthly view to the user trades by filtering the trades
@@ -42,5 +43,6 @@ Todo:
 
   ☐ Configuration/Deployment
     ✔ TODO: Setup the gitlab for the project in your own workspace @done(25-07-26 02:34)
-    ☐ TODO: Check for the deployment server if you can deploy the project on another system
+    ✔ TODO: Check for the deployment server if you can deploy the project on another system @done(25-07-29 02:19)
+    ✔ TODO: Deploy the Frondend and Backend on the Render.com @done(25-07-29 02:20)
 
