@@ -9,7 +9,7 @@ services:
     rootDir: backend
     buildCommand: |
       pip install --upgrade pip
-      pip install -r requirements.txt
+      pip install --only-binary=pandas,numpy,scipy -r requirements.txt
       export PYTHONPATH=$PYTHONPATH:/opt/render/project/src/backend
       export DJANGO_SETTINGS_MODULE=money_multiplier.settings
       python manage.py migrate
