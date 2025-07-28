@@ -38,7 +38,7 @@ amqp==5.3.1
 
 # Web scraping and parsing (compatible versions)
 beautifulsoup4==4.12.2
-lxml==4.9.3
+# lxml==4.9.3
 # Removed pyppeteer due to urllib3 conflict
 # Use selenium-stealth or alternative if needed
 selenium==4.34.2
