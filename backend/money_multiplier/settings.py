@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-1*cjz4-m0lyfmo0@@3jg#m0xdl7ft3srpx(kk7ww6r8s*bb8ef
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '.onrender.com', 'algotrading-backend.onrender.com']
 
 
 # Application definition
@@ -149,6 +149,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "https://algotrading-backend.onrender.com",
+    "https://algotrading-frontend.onrender.com",
 ]
 
 # Allow all origins during development (less secure)
