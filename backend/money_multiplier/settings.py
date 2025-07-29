@@ -187,6 +187,7 @@ CORS_ALLOWED_ORIGINS_LOCAL = [
     "http://192.168.1.6:3000",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "https://algotrading-frontend.onrender.com",
 ]
 
 # Combine production and local origins
