@@ -1195,7 +1195,7 @@ const AppProvider = () => {
               </Box>
 
               {/* Trade Entries Table Section */}
-              <Card sx={{ minWidth: '400px', maxWidth: '520px', border: '2px solid #222', borderRadius: '12px' }}>
+              <Card sx={{ minWidth: '400px', maxWidth: '700px', border: '2px solid #222', borderRadius: '12px' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="h5" sx={{ color: '#2563eb', fontWeight: 'bold' }}>
