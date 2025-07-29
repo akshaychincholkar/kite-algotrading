@@ -38,7 +38,7 @@ else:
 if os.getenv('ENVIRONMENT') == 'local':
     ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '192.168.1.6', '*']
 else:
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '.onrender.com', 'algotrading-backend.onrender.com']
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '.onrender.com', 'algotrading-backend.onrender.com', '.railway.app', '.up.railway.app', 'kite-algotrading-production.up.railway.app']
 
 
 # Application definition
@@ -169,6 +169,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8080",
     "https://algotrading-backend.onrender.com",
     "https://algotrading-frontend.onrender.com",
+    "https://kite-algotrading-production.up.railway.app",
+    "https://algotrading-frontend.up.railway.app",
+    "https://algotrading-frontend.railway.app",
 ]
 
 # Allow all origins during development (less secure)
