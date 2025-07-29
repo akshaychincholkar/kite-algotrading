@@ -6,6 +6,8 @@ import { join } from 'path';
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0', // Allow external connections
+    port: 5173,
     fs: {
       allow: [
         '.',

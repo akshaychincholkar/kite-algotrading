@@ -1,269 +1,304 @@
-// Main AlgoTradeUI component for the trading dashboard
 import React, { useState, useEffect } from "react";
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
-import Menu from '@mui/material/Menu';
-import MenuIcon from '@mui/icons-material/Menu';
-import Container from '@mui/material/Container';
-import Avatar from '@mui/material/Avatar';
-import Button from '@mui/material/Button';
-import Tooltip from '@mui/material/Tooltip';
-import MenuItem from '@mui/material/MenuItem';
-import AdbIcon from '@mui/icons-material/Adb';
-import { styled } from '@mui/material/styles';
-import Paper from '@mui/material/Paper';
-import Grid from '@mui/material/Grid';
-import { PieChart } from '@mui/x-charts/PieChart';
+import { 
+  AppBar, 
+  Toolbar, 
+  IconButton, 
+  Typography, 
+  Drawer, 
+  Box, 
+  Button, 
+  Switch,
+  FormControlLabel,
+  ThemeProvider,
+  createTheme,
+  CssBaseline,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Grid,
+  Paper,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Card,
+  CardContent
+} from "@mui/material";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { getApiUrl } from './config/api';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { PieChart } from '@mui/x-charts/PieChart';
+import axios from 'axios';
 import dayjs from 'dayjs';
-import axios from "axios";
-import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
-// import { Box, Button, MenuItem, Select, TextField } from '@mui/material';
-import SaveIconSvg from './assets/save-icon.svg';
-import DeleteIconSvg from './assets/delete-icon.svg';
-// Responsive MUI AppBar component
-const pages = [
-  { label: 'INDIA', comingSoon: false },
-  { label: 'US', comingSoon: true },
-  { label: 'F&O', comingSoon: true }
-];
-const settings = ['Settings', 'Logout'];
+import MenuIcon from "@mui/icons-material/Menu";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import SearchIcon from "@mui/icons-material/Search";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import SettingsIcon from "@mui/icons-material/Settings";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
+import Brightness7Icon from "@mui/icons-material/Brightness7";
 
-// Template for a new trade entry row
-const initialEntry = {
-  stock: "",
-  cmp: "",
-  slp: "",
-  tgtp: "",
-  sb: "",
-  rsi: "",
-  candle: "",
-  volume: "",
-  pl: "",
-  entry_date: "",
-  exit_date: "",
-  remarks: ""
-};
+const AppProvider = () => {
+  const [drawerOpen, setDrawerOpen] = useState(false); // Drawer is collapsed (closed) by default
+  const [darkMode, setDarkMode] = useState(false); // Theme state
+  const [activeSection, setActiveSection] = useState('risk-roi'); // Active section state
 
-import { useNavigate } from "react-router-dom";
-
-export default function AlgoTradeUI() {
-  // --- UI and utility helpers ---
-  // Styled Paper for grid items
-  // Helper to determine contrast color (black/white) based on background
-  function getContrastColor(bgColor) {
-    // Remove hash if present
-    const color = bgColor.charAt(0) === '#' ? bgColor.substring(1, 7) : bgColor;
-    const r = parseInt(color.substring(0, 2), 16);
-    const g = parseInt(color.substring(2, 4), 16);
-    const b = parseInt(color.substring(4, 6), 16);
-    // Perceived brightness
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    return brightness > 180 ? '#222' : '#fff';
-  }
-
-  // Use a slightly off-white background for grid items
-  const gridBg = '#f8fafc';
-  const gridColor = getContrastColor(gridBg);
-  const Item = styled(Paper)(() => ({
-    backgroundColor: gridBg,
-    padding: 8,
-    textAlign: 'center',
-    color: gridColor,
-    fontWeight: 'bold',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-    borderRadius: 8,
-  }));
-
-  // ResponsiveAppBar component inside AlgoTradeUI to access state variables
-  const ResponsiveAppBar = () => {
-    const [anchorElNav, setAnchorElNav] = React.useState(null);
-    const [anchorElUser, setAnchorElUser] = React.useState(null);
-
-    const handleOpenNavMenu = (event) => {
-      setAnchorElNav(event.currentTarget);
-    };
-    const handleOpenUserMenu = (event) => {
-      setAnchorElUser(event.currentTarget);
-    };
-
-    const handleCloseNavMenu = () => {
-      setAnchorElNav(null);
-    };
-
-    const handleCloseUserMenu = () => {
-      setAnchorElUser(null);
-    };
-
-    const handleMenuItemClick = (setting) => {
-      if (setting === 'Logout') {
-        // Clear local storage and redirect to home
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("kiteUser");
-        window.location.href = '/';
-      } else if (setting === 'Settings') {
-        // Route to user-roi page with ROI data
-        const roiData = {
-          user_id: user && user.user_id ? user.user_id : "",
-          total_capital: capital,
-          risk,
-          total_risk: totalRisk,
-          diversification,
-          ipt: investmentPerTrade,
-          rpt: riskPerTrade,
-          invested: investedSum,
-          monthly_pl: monthlyPLTotal,
-          tax_pl: taxPL,
-          donation_pl: donation,
-          monthly_gain: monthlyGain,
-          monthly_percent_gain: monthlyGainPercent,
-          total_gain: monthlyGain,
-          total_percert_gain: monthlyGainPercent
-        };
-        navigate('/user-roi', { state: roiData });
-      }
-      setAnchorElUser(null);
-    };
-
-    return (
-      <AppBar position="static">
-        <Container maxWidth="xl">
-          <Toolbar disableGutters>
-            <AdbIcon sx={{ display: { xs: 'none', md: 'flex' }, mr: 1 }} />
-            <Typography
-              variant="h6"
-              noWrap
-              component="a"
-              href="#app-bar-with-responsive-menu"
-              sx={{
-                mr: 2,
-                display: { xs: 'none', md: 'flex' },
-                fontFamily: 'monospace',
-                fontWeight: 700,
-                letterSpacing: '.3rem',
-                color: 'inherit',
-                textDecoration: 'none',
-              }}
-            >
-              Money Multiplier⚡
-            </Typography>
-            <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
-              <IconButton
-                size="large"
-                aria-label="account of current user"
-                aria-controls="menu-appbar"
-                aria-haspopup="true"
-                onClick={handleOpenNavMenu}
-                color="inherit"
-              >
-                <MenuIcon />
-              </IconButton>
-              <Menu
-                id="menu-appbar"
-                anchorEl={anchorElNav}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                keepMounted
-                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                open={Boolean(anchorElNav)}
-                onClose={handleCloseNavMenu}
-                sx={{ display: { xs: 'block', md: 'none' } }}
-              >
-                {pages.map((page) => (
-                  page.comingSoon ? (
-                    <Tooltip key={page.label} title="Coming soon" arrow>
-                      <span>
-                        <MenuItem disabled>
-                          <Typography sx={{ textAlign: 'center' }}>{page.label}</Typography>
-                        </MenuItem>
-                      </span>
-                    </Tooltip>
-                  ) : (
-                    <MenuItem key={page.label} onClick={handleCloseNavMenu}>
-                      <Typography sx={{ textAlign: 'center' }}>{page.label}</Typography>
-                    </MenuItem>
-                  )
-                ))}
-              </Menu>
-            </Box>
-            <AdbIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
-            <Typography
-              variant="h5"
-              noWrap
-              component="a"
-              href="#app-bar-with-responsive-menu"
-              sx={{
-                mr: 2,
-                display: { xs: 'flex', md: 'none' },
-                flexGrow: 1,
-                fontFamily: 'monospace',
-                fontWeight: 700,
-                letterSpacing: '.3rem',
-                color: 'inherit',
-                textDecoration: 'none',
-              }}
-            >
-              Money Multiplier ⚡
-            </Typography>
-            <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
-              {pages.map((page) => (
-                page.comingSoon ? (
-                  <Tooltip key={page.label} title="Coming soon" arrow>
-                    <span>
-                      <Button
-                        onClick={handleCloseNavMenu}
-                        sx={{ my: 2, color: 'white', display: 'block' }}
-                        disabled
-                      >
-                        {page.label}
-                      </Button>
-                    </span>
-                  </Tooltip>
-                ) : (
-                  <Button
-                    key={page.label}
-                    onClick={handleCloseNavMenu}
-                    sx={{ my: 2, color: 'white', display: 'block' }}
-                  >
-                    {page.label}
-                  </Button>
-                )
-              ))}
-            </Box>
-            <Box sx={{ flexGrow: 0 }}>
-              <Tooltip title="Open settings">
-                <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                  <Avatar alt="Settings" sx={{ bgcolor: '#061a0ae1', color: 'white', fontSize: '1.2em' }}>⚡</Avatar>
-                </IconButton>
-              </Tooltip>
-              <Menu
-                sx={{ mt: '45px' }}
-                id="menu-appbar"
-                anchorEl={anchorElUser}
-                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                keepMounted
-                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                open={Boolean(anchorElUser)}
-                onClose={handleCloseUserMenu}
-              >
-                {settings.map((setting) => (
-                  <MenuItem key={setting} onClick={() => handleMenuItemClick(setting)}>
-                    <Typography textAlign="center" sx={{ fontSize: '1.15em' }}>{setting}</Typography>
-                  </MenuItem>
-                ))}
-              </Menu>
-            </Box>
-          </Toolbar>
-        </Container>
-      </AppBar>
-    );
+  // Initial entry for new trades (moved before it's used)
+  const initialEntry = {
+    stock: "",
+    cmp: "",
+    slp: "",
+    tgtp: "",
+    sb: "",
+    rsi: "",
+    candle: "",
+    volume: "",
+    pl: "",
+    entry_date: "",
+    exit_date: "",
+    remarks: ""
   };
-  // --- Trade action handlers ---
+
+  // Trading state variables from original implementation
+  const [entries, setEntries] = useState([initialEntry]);
+  const [capital, setCapital] = useState(0);
+  const [risk, setRisk] = useState(0);
+  const [maxLoss, setMaxLoss] = useState(5000);
+  const [maxProfit, setMaxProfit] = useState(15000);
+  const [user, setUser] = useState(null);
+  const [screeners, setScreeners] = useState([]);
+  const [selectedScreener, setSelectedScreener] = useState('');
+  const [screenerStocks, setScreenerStocks] = useState([]);
+  const [loadingStocks, setLoadingStocks] = useState(false);
+  const [diversification, setDiversification] = useState(0);
+  const [roiLoaded, setRoiLoaded] = useState(false);
+
+  // Settings form state (based on UserROI.jsx)
+  const [settingsForm, setSettingsForm] = useState({
+    total_capital: "",
+    risk: "",
+    total_risk: "",
+    diversification: "",
+    ipt: "",
+    rpt: "",
+    invested: "",
+    monthly_pl: "",
+    tax_pl: "",
+    donation_pl: "",
+    monthly_gain: "",
+    monthly_percent_gain: "",
+    total_gain: "",
+    total_percert_gain: ""
+  });
+  const [settingsMessage, setSettingsMessage] = useState("");
+  
+  // Screener management state
+  const [showAddScreenerModal, setShowAddScreenerModal] = useState(false);
+  const [newScreenerName, setNewScreenerName] = useState("");
+  const [addScreenerLoading, setAddScreenerLoading] = useState(false);
+  const [addScreenerError, setAddScreenerError] = useState("");
+
+  // Screener table columns (from UserROI.jsx)
+  const screenerTableColumns = [
+    "screener_name",
+    "created_by", 
+    "created_at",
+    "updated_at",
+    "last_run"
+  ];
+
+  // Pagination for stocks table (add these state variables)
+  const [stocksPage, setStocksPage] = useState(1);
+  const stocksPerPage = 5;
+  const paginatedStocks = screenerStocks.slice((stocksPage - 1) * stocksPerPage, stocksPage * stocksPerPage);
+  const totalPages = Math.ceil(screenerStocks.length / stocksPerPage);
+
+  // --- Calculated fields for summary stats ---
+  const riskPerTrade = capital * risk / 100;
+  const totalRisk = riskPerTrade * diversification;
+  const investmentPerTrade = capital / diversification;
+
+  // --- Summary calculations for dashboard KPIs ---
+  let investedSum = 0, monthlyPLTotal = 0, taxPL = 0, donation = 0, monthlyGain = 0, monthlyGainPercent = 0;
+
+  // Only sum Invested for rows where P/L is not selected
+  investedSum = entries.reduce((sum, row) => {
+    if (!row.pl) {
+      // Use the computed invested value for the row
+      return sum + (Number(row.invested) || 0);
+    }
+    return sum;
+  }, 0);
+
+  monthlyPLTotal = entries.reduce((sum, row) => {
+    if (row.pl === "Profit" || row.pl === "Loss") {
+      const cmp = Number(row.cmp) || 0;
+      const slp = Number(row.slp) || 0;
+      const tgtp = Number(row.tgtp) || 0;
+      const sb = Number(row.sb) || 0;
+      const sl = cmp - slp;
+      const tgt = tgtp - cmp;
+      const invested = cmp * sb;
+      let booked = 0;
+      if (row.pl === "Profit") booked = (cmp + tgt) * sb - invested;
+      else if (row.pl === "Loss") booked = (cmp - sl) * sb - invested;
+      return sum + booked;
+    }
+    return sum;
+  }, 0);
+
+  taxPL = monthlyPLTotal > 0 ? monthlyPLTotal * 0.2 : 0;
+  donation = monthlyPLTotal > 0 ? monthlyPLTotal * 0.04 : 0;
+  monthlyGain = monthlyPLTotal - taxPL - donation;
+  monthlyGainPercent = capital > 0 ? (monthlyGain / capital) * 100 : 0;
+
+  // Pie chart data: sum of Booked < 0 and > 0
+  const bookedPositive = entries.reduce((sum, row) => sum + (row.booked > 0 ? row.booked : 0), 0);
+  const bookedNegative = entries.reduce((sum, row) => sum + (row.booked < 0 ? Math.abs(row.booked) : 0), 0);
+  const pieData = [
+    { id: 0, value: bookedPositive, label: 'Profit', color: '#38a169' },
+    { id: 1, value: bookedNegative, label: 'Loss', color: '#dc2626' },
+  ];
+
+  // API helper function
+  const getApiUrl = (endpoint) => {
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://kite-algotrading-production.up.railway.app' 
+      : 'http://localhost:8000';
+    return `${baseUrl}/${endpoint}`;
+  };
+
+  const toggleDrawer = (open) => () => {
+    setDrawerOpen(open);
+  };
+
+  const toggleTheme = () => {
+    setDarkMode(!darkMode);
+  };
+
+  // Create theme based on dark mode state
+  const theme = createTheme({
+    palette: {
+      mode: darkMode ? 'dark' : 'light',
+      primary: {
+        main: '#2563eb', // Blue color from original theme
+      },
+      secondary: {
+        main: '#64748b',
+      },
+      background: {
+        default: darkMode ? '#0f172a' : '#f8fafc',
+        paper: darkMode ? '#1e293b' : '#ffffff',
+      },
+    },
+    components: {
+      MuiAppBar: {
+        styleOverrides: {
+          root: {
+            backgroundColor: darkMode ? '#1e293b' : '#2563eb',
+          },
+        },
+      },
+    },
+  });
+
+  // Menu items for sidebar
+  const menuItems = [
+    { id: 'risk-roi', label: 'Risk Management & ROI', icon: <TrendingUpIcon /> },
+    { id: 'screener', label: 'Screener & Trade Entries', icon: <SearchIcon /> },
+    { id: 'charts', label: 'Charts', icon: <BarChartIcon /> },
+    { id: 'settings', label: 'Settings', icon: <SettingsIcon /> },
+  ];
+
+  const handleMenuItemClick = (sectionId) => {
+    setActiveSection(sectionId);
+    setDrawerOpen(false);
+  };
+
+  // Add stock to Trade Entries at the top (from screener)
+  const handleTradeStock = (stockName) => {
+    const newEntry = computeRow({
+      ...initialEntry,
+      stock: stockName
+    });
+    setEntries(prev => [newEntry, ...prev]);
+  };
+
+  // Helper to compute all derived fields for a row
+  const computeRow = (row) => {
+    const cmp = Number(row.cmp) || 0;
+    const slp = Number(row.slp) || 0;
+    const tgtp = Number(row.tgtp) || 0;
+    const sb = Number(row.sb) || 0;
+    const sl = cmp - slp;
+    const tgt = tgtp - cmp;
+    
+    // Invested logic: CMP * SB only when P/L is not selected
+    let invested;
+    if (!row.pl) {
+      invested = cmp * sb;
+    } else {
+      invested = cmp * sb; // fallback to previous logic, can be customized if needed
+    }
+    
+    let booked = '';
+    if (row.pl === 'Profit') booked = ((cmp + tgt) * sb - invested).toFixed(2);
+    else if (row.pl === 'Loss') booked = ((cmp - sl) * sb - invested).toFixed(2);
+    else booked = '';
+    
+    let rr = '';
+    if (row.pl === 'Profit' && sl !== 0 && sb !== 0) rr = ((booked / sb) / sl).toFixed(2);
+    
+    const stb_sl = sl !== 0 ? Math.floor(riskPerTrade / sl) : 0;
+    const stb_ipt = cmp !== 0 ? Math.floor(investmentPerTrade / cmp) : 0;
+    let stb = '';
+    if (stb_sl > 0 && stb_ipt > 0) stb = Math.min(stb_sl, stb_ipt).toString();
+    else if (stb_sl > 0) stb = stb_sl.toString();
+    else if (stb_ipt > 0) stb = stb_ipt.toString();
+    
+    const percent_pl = invested !== 0 ? ((booked / invested) * 100).toFixed(2) : '';
+    
+    return {
+      ...row,
+      sl: sl.toFixed(2),
+      tgt: tgt.toFixed(2),
+      stb_sl,
+      stb_ipt,
+      stb: stb ? Number(stb) : 0,
+      invested: invested.toFixed(2),
+      booked: booked ? Number(booked) : 0,
+      rr: rr ? Number(rr) : 0,
+      percent_pl: percent_pl ? Number(percent_pl) : 0,
+    };
+  };
+
+  // Helper for Tenure calculation (days between entry and exit)
+  const getTenure = (entry, exit) => {
+    if (!entry) return "";
+    const entryDate = new Date(entry);
+    const today = new Date();
+    if (!exit) {
+      // Entry present, exit blank
+      return Math.ceil((today - entryDate) / (1000 * 60 * 60 * 24));
+    }
+    // Both present
+    const exitDate = new Date(exit);
+    return Math.ceil((exitDate - entryDate) / (1000 * 60 * 60 * 24));
+  };
+
+  // Add row handler (ensure computed fields are set)
+  const handleAddRow = () => setEntries(prev => [computeRow(initialEntry), ...prev]);
+
   // Buy handler for Trade Entries
   const handleBuyRow = async (row, idx) => {
     if (!user || !user.user_id || !row.stock) {
@@ -290,242 +325,7 @@ export default function AlgoTradeUI() {
       alert('Error placing buy order: ' + (error?.response?.data?.error || error.message));
     }
   };
-  // --- Screener and stock state ---
-  const [screeners, setScreeners] = useState([]);
-  const [selectedScreener, setSelectedScreener] = useState("");
-  const [screenerStocks, setScreenerStocks] = useState([]);
-  const [loadingStocks, setLoadingStocks] = useState(false);
-  // Pagination for stocks table
-  const [stocksPage, setStocksPage] = useState(1);
-  const stocksPerPage = 5;
-  const paginatedStocks = screenerStocks.slice((stocksPage - 1) * stocksPerPage, stocksPage * stocksPerPage);
-  const totalPages = Math.ceil(screenerStocks.length / stocksPerPage);
-  const navigate = useNavigate();
-  // --- User, capital, and trade state ---
-  // Capital, risk, diversification, and trade entries
-  const [capital, setCapital] = useState(0);
-  const [risk, setRisk] = useState(0);
-  const [diversification, setDiversification] = useState(0);
-  const [roiLoaded, setRoiLoaded] = useState(false);
-  // Main trade entries array
-  const [entries, setEntries] = useState([initialEntry]);
-  // User authentication and info
-  const [accessToken, setAccessToken] = useState(() => localStorage.getItem("accessToken") || "");
-  const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem("kiteUser");
-    return stored ? JSON.parse(stored) : null;
-  });
 
-  // --- Data fetching hooks ---
-  // Fetch stocks when selectedScreener changes
-  useEffect(() => {
-    if (!selectedScreener) {
-      setScreenerStocks([]);
-      return;
-    }
-    setLoadingStocks(true);
-    axios.get(getApiUrl(`api/stocks?screener_name=${encodeURIComponent(selectedScreener)}`))
-      .then(res => {
-        if (res.data && Array.isArray(res.data.stocks)) {
-          setScreenerStocks(res.data.stocks);
-        } else {
-          setScreenerStocks([]);
-        }
-      })
-      .catch(() => setScreenerStocks([]))
-      .finally(() => setLoadingStocks(false));
-  }, [selectedScreener]);
-
-  // Add stock to Trade Entries at the top (from screener)
-  const handleTradeStock = (stockName) => {
-    const newEntry = computeRow({
-      ...initialEntry,
-      stock: stockName
-    });
-    setEntries(prev => [newEntry, ...prev]);
-  };
-
-  // Fetch all screeners on mount
-  useEffect(() => {
-    axios.get(getApiUrl("api/screener/"))
-      .then(res => {
-        if (Array.isArray(res.data)) {
-          setScreeners(res.data);
-          // Do not auto-select any screener, keep blank by default
-          // setSelectedScreener("");
-        }
-      })
-      .catch(() => setScreeners([]));
-  }, []);
-
-  // On mount: handle request_token and fetch trades for user
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const requestToken = params.get("request_token");
-    if (requestToken) {
-      axios.post(getApiUrl("api/generate-token/"), { request_token: requestToken })
-        .then(res => {
-          setAccessToken(res.data.access_token);
-          localStorage.setItem("accessToken", res.data.access_token);
-          if (res.data.user) {
-            setUser(res.data.user);
-            localStorage.setItem("kiteUser", JSON.stringify(res.data.user));
-          }
-          params.delete("request_token");
-          const newUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : "");
-          window.history.replaceState({}, "", newUrl);
-          window.location.replace("/trade");
-        })
-        .catch(err => {
-          setAccessToken("Failed to fetch access token");
-        });
-    } else {
-      // If user is already set, fetch trades and ROI for user
-      const kiteUser = user || (localStorage.getItem("kiteUser") ? JSON.parse(localStorage.getItem("kiteUser")) : null);
-      if (kiteUser && kiteUser.user_id) {
-        axios.get(getApiUrl(`api/trades/?user_id=${kiteUser.user_id}`))
-          .then(res => {
-            if (Array.isArray(res.data) && res.data.length > 0) {
-              setEntries(res.data);
-            }
-          })
-          .catch(err => {
-            window.location.replace('/');
-          });
-        // Fetch user_roi for this user and update summary fields
-        if (!roiLoaded) {
-          axios.get(getApiUrl(`api/user_roi/?user_id=${kiteUser.user_id}`))
-            .then(res => {
-              if (res.data && typeof res.data === 'object') {
-                // Update all summary fields except user
-                if (res.data.total_capital !== undefined) setCapital(Number(res.data.total_capital));
-                if (res.data.risk !== undefined) setRisk(Number(res.data.risk));
-                if (res.data.diversification !== undefined) setDiversification(Number(res.data.diversification));
-                // You can add more fields if you want to sync more
-              }
-              setRoiLoaded(true);
-            })
-            .catch(() => setRoiLoaded(true));
-        }
-      }
-    }
-  }, [user, roiLoaded]);
-
-  // --- Calculated fields for summary stats ---
-  const riskPerTrade = capital * risk / 100;
-  const totalRisk = riskPerTrade * diversification;
-  const investmentPerTrade = capital / diversification;
-
-  // --- Trade row calculation logic ---
-  // Helper to compute all derived fields for a row
-  const computeRow = (row) => {
-    const cmp = Number(row.cmp) || 0;
-    const slp = Number(row.slp) || 0;
-    const tgtp = Number(row.tgtp) || 0;
-    const sb = Number(row.sb) || 0;
-    const sl = cmp - slp;
-    const tgt = tgtp - cmp;
-    // Invested logic: CMP * SB only when P/L is not selected
-    let invested;
-    if (!row.pl) {
-      invested = cmp * sb;
-    } else {
-      invested = cmp * sb; // fallback to previous logic, can be customized if needed
-    }
-    let booked = '';
-    if (row.pl === 'Profit') booked = ((cmp + tgt) * sb - invested).toFixed(2);
-    else if (row.pl === 'Loss') booked = ((cmp - sl) * sb - invested).toFixed(2);
-    else booked = '';
-    let rr = '';
-    if (row.pl === 'Profit' && sl !== 0 && sb !== 0) rr = ((booked / sb) / sl).toFixed(2);
-    const stb_sl = sl !== 0 ? Math.floor(riskPerTrade / sl) : 0;
-    const stb_ipt = cmp !== 0 ? Math.floor(investmentPerTrade / cmp) : 0;
-    let stb = '';
-    if (stb_sl > 0 && stb_ipt > 0) stb = Math.min(stb_sl, stb_ipt).toString();
-    else if (stb_sl > 0) stb = stb_sl.toString();
-    else if (stb_ipt > 0) stb = stb_ipt.toString();
-    const percent_pl = invested !== 0 ? ((booked / invested) * 100).toFixed(2) : '';
-    return {
-      ...row,
-      sl: sl.toFixed(2),
-      tgt: tgt.toFixed(2),
-      stb_sl,
-      stb_ipt,
-      stb: stb ? Number(stb) : 0,
-      invested: invested.toFixed(2),
-      booked: booked ? Number(booked) : 0,
-      rr: rr ? Number(rr) : 0,
-      percent_pl: percent_pl ? Number(percent_pl) : 0,
-    };
-  };
-
-  // Add row handler (ensure computed fields are set)
-  const handleAddRow = () => setEntries(prev => [computeRow(initialEntry), ...prev]);
-
-  // Helper for Tenure calculation (days between entry and exit)
-  const getTenure = (entry, exit) => {
-    if (!entry) return "";
-    const entryDate = new Date(entry);
-    const today = new Date();
-    if (!exit) {
-      // Entry present, exit blank
-      return Math.ceil((today - entryDate) / (1000 * 60 * 60 * 24));
-    }
-    // Both present
-    const exitDate = new Date(exit);
-    return Math.ceil((exitDate - entryDate) / (1000 * 60 * 60 * 24));
-  };
-
-  // Ensure all entries always have computed fields populated (on mount)
-  useEffect(() => {
-    setEntries((prev) => prev.map(computeRow));
-    // eslint-disable-next-line
-  }, []);
-
-  // --- Summary calculations for dashboard KPIs ---
-  // (must be after all useState hooks and before return)
-
-let investedSum = 0, monthlyPLTotal = 0, taxPL = 0, donation = 0, monthlyGain = 0, monthlyGainPercent = 0;
-
-// Only sum Invested for rows where P/L is not selected
-investedSum = entries.reduce((sum, row) => {
-  if (!row.pl) {
-    // Use the computed invested value for the row
-    return sum + (Number(row.invested) || 0);
-  }
-  return sum;
-}, 0);
-
-monthlyPLTotal = entries.reduce((sum, row) => {
-  if (row.pl === "Profit" || row.pl === "Loss") {
-    const cmp = Number(row.cmp) || 0;
-    const slp = Number(row.slp) || 0;
-    const tgtp = Number(row.tgtp) || 0;
-    const sb = Number(row.sb) || 0;
-    const sl = cmp - slp;
-    const tgt = tgtp - cmp;
-    const invested = cmp * sb;
-    let booked = 0;
-    if (row.pl === "Profit") booked = (cmp + tgt) * sb - invested;
-    else if (row.pl === "Loss") booked = (cmp - sl) * sb - invested;
-    return sum + booked;
-  }
-  return sum;
-}, 0);
-
-taxPL = monthlyPLTotal > 0 ? monthlyPLTotal  * 0.2 : 0;
-donation = monthlyPLTotal > 0 ? monthlyPLTotal * 0.04 : 0;
-monthlyGain = monthlyPLTotal - taxPL - donation;
-monthlyGainPercent = capital > 0 ? (monthlyGain / capital) * 100 : 0;
-
-// Pie chart data: sum of Booked < 0 and > 0
-const bookedPositive = entries.reduce((sum, row) => sum + (row.booked > 0 ? row.booked : 0), 0);
-const bookedNegative = entries.reduce((sum, row) => sum + (row.booked < 0 ? Math.abs(row.booked) : 0), 0);
-const pieData = [
-  { id: 0, value: bookedPositive, label: 'Profit', color: '#38a169' },
-  { id: 1, value: bookedNegative, label: 'Loss', color: '#dc2626' },
-];
-  // --- Row action handlers for Trade table ---
   // Delete a trade row (and from backend if saved)
   const handleDeleteRow = async (row, index) => {
     // If the row has a database ID, call backend to delete
@@ -623,542 +423,1924 @@ const pieData = [
       const updated = [...entries];
       updated[index] = { ...row, ...response.data };
       setEntries(updated);
-      alert(`Trade saved successfully! `);
+      alert(`Trade saved successfully!`);
     } catch (error) {
       alert('Failed to save row.');
     }
   };
 
-  //  #TODO: code to list the all the trade
-  // TODO: Rich the UI with scrollbar
-  // TODO: Create gitlab for. 
+  // Settings form calculation logic (from UserROI.jsx)
+  const recalculateSettingsForm = (changed, value) => {
+    const newForm = { ...settingsForm, [changed]: value };
+    const totalCapital = parseFloat(newForm.total_capital) || 0;
+    const risk = parseFloat(newForm.risk) || 0;
+    const diversification = parseFloat(newForm.diversification) || 0;
+    const riskPerTrade = totalCapital * risk / 100;
+    const totalRisk = riskPerTrade * diversification;
+    const investmentPerTrade = diversification !== 0 ? totalCapital / diversification : 0;
 
+    // Recalculate dependent fields when base values change
+    if (["total_capital", "risk", "diversification"].includes(changed)) {
+      newForm.rpt = riskPerTrade;
+      newForm.total_risk = totalRisk;
+      newForm.ipt = investmentPerTrade;
+      
+      // Update main state variables as well
+      setCapital(totalCapital);
+      setRisk(risk);
+      setDiversification(diversification);
+    }
 
-  // --- Main Render ---
-  return (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      {/* Show AppBar on all screens except '/' route */}
-      {window.location.pathname !== '/' && <ResponsiveAppBar />}
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: 'linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)', minHeight: '100vh', width: '100vw', padding: '32px 0' }}>
-      {/* Upper section divided into two parts: ROI grid and Screener/Stocks */}
-      <div className="flex flex-row gap-8 mb-8" style={{ justifyContent: 'flex-start', marginLeft: '10%', width: '100%' }}>
-        {/* Part 1: ROI Grid in Box (summary KPIs) */}
-        <div style={{ display: 'flex', flexDirection: 'column', width: '60%' }}>
-          {/* Centered Heading above KPI Box */}
-          <h1 style={{ textAlign: 'center', fontSize: '2rem', fontWeight: 'bold', color: '#2563eb', marginBottom: '18px' }}>
-            {user?.user_shortname ? `${user.user_shortname}'s Risk Management & ROI Portfolio` : 'Risk Management & ROI Portfolio'}
-          </h1>
-          <Box sx={{ flexGrow: 1, width: '100%', border: '2px solid #222', borderRadius: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', background: '#fff', padding: '24px 6px', marginBottom: '0px', paddingRight: '-30%' }}>
-            <Grid container spacing={2} columns={4}>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}><Item sx={{ height: '50%', minWidth: 0 , fontSize: '1.3rem'}}>Total Capital<br />{capital}</Item></Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}><Item sx={{ height: '50%', minWidth: 0 , fontSize: '1.3rem'}}>Risk (%)<br />{risk}</Item></Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}><Item sx={{ height: '50%', minWidth: 0 , fontSize: '1.3rem'}}>Total Risk<br />{totalRisk.toFixed(2)}</Item></Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}><Item sx={{ height: '50%', minWidth: 0 , fontSize: '1.3rem'}}>Diversification<br />{diversification}</Item></Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}><Item sx={{ height: '50%', minWidth: 0 , fontSize: '1.3rem'}}>Investment/Trade<br />{investmentPerTrade.toFixed(2)}</Item></Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}><Item sx={{ height: '50%', minWidth: 0 , fontSize: '1.3rem'}}>Risk/Trade<br />{riskPerTrade.toFixed(2)}</Item></Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}><Item sx={{ height: '50%', minWidth: 0 , fontSize: '1.3rem'}}>Invested<br />{investedSum.toFixed(2)}</Item></Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
-                <Item sx={{ height: '50%', minWidth: 0 , fontSize: '1.3rem'}}>
-                  Monthly P/L<br />
-                  <span style={{ color: monthlyPLTotal > 0 ? '#38a169' : monthlyPLTotal < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
-                    {monthlyPLTotal.toFixed(2)}
-                  </span>
-                </Item>
+    // Recalculate P/L related fields
+    const monthlyPL = parseFloat(newForm.monthly_pl) || 0;
+    let taxPL = monthlyPL > 0 ? monthlyPL * 0.2 : 0; // 20% tax
+    let donation = monthlyPL > 0 ? monthlyPL * 0.04 : 0; // 4% donation
+    let monthlyGain = monthlyPL - taxPL - donation;
+    let monthlyGainPercent = totalCapital > 0 ? (monthlyGain / totalCapital) * 100 : 0;
+    
+    if (["monthly_pl", "total_capital"].includes(changed)) {
+      newForm.tax_pl = taxPL;
+      newForm.donation_pl = donation;
+      newForm.monthly_gain = monthlyGain;
+      newForm.monthly_percent_gain = monthlyGainPercent;
+      newForm.total_gain = monthlyGain;
+      newForm.total_percert_gain = monthlyGainPercent;
+    }
+
+    return newForm;
+  };
+
+  // Settings form change handler
+  const handleSettingsChange = (e) => {
+    const { name, value } = e.target;
+    setSettingsForm(prev => recalculateSettingsForm(name, value));
+  };
+
+  // Settings form submit handler
+  const handleSettingsSubmit = async (e) => {
+    e.preventDefault();
+    setSettingsMessage("");
+    
+    const userId = user && user.user_id ? user.user_id : null;
+    if (!userId) {
+      setSettingsMessage("User not authenticated");
+      return;
+    }
+
+    // Convert all fields to numbers or null for backend
+    const payload = { user_id: userId };
+    Object.keys(settingsForm).forEach(key => {
+      let val = settingsForm[key];
+      if (val === "" || val === null || typeof val === "undefined") {
+        payload[key] = null;
+      } else {
+        let num = Number(val);
+        // Round percent fields to 2 decimal places
+        if (["monthly_percent_gain", "total_percert_gain"].includes(key) && !isNaN(num)) {
+          num = Math.round(num * 100) / 100;
+        }
+        payload[key] = isNaN(num) ? null : num;
+      }
+    });
+
+    try {
+      await axios.post(getApiUrl("api/user_roi/"), payload);
+      setSettingsMessage("Settings saved successfully!");
+      alert("Settings saved successfully!");
+    } catch (err) {
+      setSettingsMessage("Error saving settings.");
+      alert("Error saving settings.");
+    }
+  };
+
+  // Add screener handler
+  const handleAddScreener = async () => {
+    if (!newScreenerName) return;
+    
+    const userId = user && user.user_id ? user.user_id : null;
+    if (!userId) {
+      setAddScreenerError("User not authenticated");
+      return;
+    }
+
+    setAddScreenerLoading(true);
+    setAddScreenerError("");
+    
+    try {
+      const payload = { user_id: userId, screener_name: newScreenerName };
+      const res = await axios.post(getApiUrl("api/screener/"), payload);
+      
+      if (res.data.success) {
+        // Refresh screener list
+        const listRes = await axios.get(getApiUrl("api/screener/"));
+        setScreeners(listRes.data);
+        setNewScreenerName("");
+        setShowAddScreenerModal(false);
+        alert("Screener added successfully!");
+      } else {
+        setAddScreenerError(res.data.error || "Unknown error");
+      }
+    } catch (e) {
+      setAddScreenerError(e.response?.data?.error || "Failed to add screener");
+    } finally {
+      setAddScreenerLoading(false);
+    }
+  };
+
+  // Ensure all entries always have computed fields populated (on mount)
+  useEffect(() => {
+    setEntries((prev) => prev.map(computeRow));
+    // eslint-disable-next-line
+  }, []);
+
+  // Fetch screeners on mount
+  useEffect(() => {
+    axios.get(getApiUrl("api/screener/"))
+      .then(res => {
+        if (Array.isArray(res.data)) {
+          setScreeners(res.data);
+        }
+      })
+      .catch(() => setScreeners([]));
+  }, []);
+
+  // On mount: handle request_token and fetch trades for user
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestToken = params.get("request_token");
+    if (requestToken) {
+      axios.post(getApiUrl("api/generate-token/"), { request_token: requestToken })
+        .then(res => {
+          setAccessToken(res.data.access_token);
+          localStorage.setItem("accessToken", res.data.access_token);
+          if (res.data.user) {
+            setUser(res.data.user);
+            localStorage.setItem("kiteUser", JSON.stringify(res.data.user));
+          }
+          params.delete("request_token");
+          const newUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : "");
+          window.history.replaceState({}, "", newUrl);
+          window.location.replace("/trade");
+        })
+        .catch(err => {
+          console.error("Failed to fetch access token:", err);
+        });
+    } else {
+      // If user is already set, fetch trades and ROI for user
+      const kiteUser = user || (localStorage.getItem("kiteUser") ? JSON.parse(localStorage.getItem("kiteUser")) : null);
+      if (kiteUser && kiteUser.user_id) {
+        axios.get(getApiUrl(`api/trades/?user_id=${kiteUser.user_id}`))
+          .then(res => {
+            if (Array.isArray(res.data) && res.data.length > 0) {
+              setEntries(res.data);
+            }
+          })
+          .catch(err => {
+            window.location.replace('/');
+          });
+        // Fetch user_roi for this user and update summary fields
+        if (!roiLoaded) {
+          axios.get(getApiUrl(`api/user_roi/?user_id=${kiteUser.user_id}`))
+            .then(res => {
+              if (res.data && typeof res.data === 'object') {
+                // Update all summary fields except user
+                if (res.data.total_capital !== undefined) setCapital(Number(res.data.total_capital));
+                if (res.data.risk !== undefined) setRisk(Number(res.data.risk));
+                if (res.data.diversification !== undefined) setDiversification(Number(res.data.diversification));
+                
+                // Populate settings form with fetched data
+                setSettingsForm(prev => ({
+                  ...prev,
+                  total_capital: res.data.total_capital || "",
+                  risk: res.data.risk || "",
+                  total_risk: res.data.total_risk || "",
+                  diversification: res.data.diversification || "",
+                  ipt: res.data.ipt || "",
+                  rpt: res.data.rpt || "",
+                  invested: res.data.invested || "",
+                  monthly_pl: res.data.monthly_pl || "",
+                  tax_pl: res.data.tax_pl || "",
+                  donation_pl: res.data.donation_pl || "",
+                  monthly_gain: res.data.monthly_gain || "",
+                  monthly_percent_gain: res.data.monthly_percent_gain || "",
+                  total_gain: res.data.total_gain || "",
+                  total_percert_gain: res.data.total_percert_gain || ""
+                }));
+              }
+              setRoiLoaded(true);
+            })
+            .catch(() => setRoiLoaded(true));
+        }
+      }
+    }
+  }, [user, roiLoaded]);
+
+  // State for access token and user authentication
+  const [accessToken, setAccessToken] = useState(() => localStorage.getItem("accessToken") || "");
+
+  // Initialize user from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("kiteUser");
+    if (stored) {
+      try {
+        const userData = JSON.parse(stored);
+        setUser(userData);
+        console.log('User initialized from localStorage:', userData); // Debug log
+      } catch (err) {
+        console.error('Error parsing stored user data:', err);
+        localStorage.removeItem("kiteUser"); // Clean up invalid data
+      }
+    }
+  }, []);
+
+  // Fetch screener stocks when selectedScreener changes
+  useEffect(() => {
+    if (!selectedScreener) {
+      setScreenerStocks([]);
+      return;
+    }
+    
+    setLoadingStocks(true);
+    setStocksPage(1); // Reset to first page when screener changes
+    axios.get(getApiUrl(`api/stocks?screener_name=${encodeURIComponent(selectedScreener)}`))
+      .then(res => {
+        if (res.data && Array.isArray(res.data.stocks)) {
+          setScreenerStocks(res.data.stocks);
+        } else {
+          setScreenerStocks([]);
+        }
+      })
+      .catch(() => setScreenerStocks([]))
+      .finally(() => setLoadingStocks(false));
+  }, [selectedScreener]);
+
+  // Fetch user ROI data when user changes (separate effect for settings)
+  useEffect(() => {
+    if (user && user.user_id && !roiLoaded) {
+      axios.get(getApiUrl(`api/user_roi/?user_id=${user.user_id}`))
+        .then(res => {
+          if (res.data && typeof res.data === 'object') {
+            console.log('Fetched ROI data:', res.data); // Debug log
+            
+            // Update main state variables
+            if (res.data.total_capital !== undefined) setCapital(Number(res.data.total_capital));
+            if (res.data.risk !== undefined) setRisk(Number(res.data.risk));
+            if (res.data.diversification !== undefined) setDiversification(Number(res.data.diversification));
+            
+            // Populate settings form with all available data
+            setSettingsForm({
+              total_capital: res.data.total_capital?.toString() || "",
+              risk: res.data.risk?.toString() || "",
+              total_risk: res.data.total_risk?.toString() || "",
+              diversification: res.data.diversification?.toString() || "",
+              ipt: res.data.ipt?.toString() || "",
+              rpt: res.data.rpt?.toString() || "",
+              invested: res.data.invested?.toString() || "",
+              monthly_pl: res.data.monthly_pl?.toString() || "",
+              tax_pl: res.data.tax_pl?.toString() || "",
+              donation_pl: res.data.donation_pl?.toString() || "",
+              monthly_gain: res.data.monthly_gain?.toString() || "",
+              monthly_percent_gain: res.data.monthly_percent_gain?.toString() || "",
+              total_gain: res.data.total_gain?.toString() || "",
+              total_percert_gain: res.data.total_percert_gain?.toString() || ""
+            });
+          }
+          setRoiLoaded(true);
+        })
+        .catch(err => {
+          console.error('Error fetching ROI data:', err);
+          setRoiLoaded(true);
+        });
+    }
+  }, [user, roiLoaded]);
+
+  // Debug effect to monitor settingsForm changes
+  useEffect(() => {
+    console.log('Settings form updated:', settingsForm);
+  }, [settingsForm]);
+
+  const renderMainContent = () => {
+    switch (activeSection) {
+      case 'risk-roi':
+        return (
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', height: '100vh', padding: '20px 0' }}>
+              {/* Centered Heading above KPI Box */}
+              <h1 style={{ 
+                textAlign: 'center', 
+                fontSize: 'clamp(1.2rem, 4vw, 2rem)', 
+                fontWeight: 'bold', 
+                color: '#2563eb', 
+                marginBottom: '18px',
+                lineHeight: '1.2',
+                padding: '0 10px'
+              }}>
+                {user?.user_shortname ? `${user.user_shortname}'s Risk Management & ROI Portfolio` : 'Risk Management & ROI Portfolio'}
+              </h1>
+              <Box sx={{ flexGrow: 1, width: '100%', border: '2px solid #222', borderRadius: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', background: '#fff', padding: '24px 6px', marginBottom: '0px' }}>
+                <Grid container spacing={2} columns={4}>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Total Capital<br />{capital}
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Risk (%)<br />{risk}
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Total Risk<br />{totalRisk.toFixed(2)}
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Diversification<br />{diversification}
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Investment/Trade<br />{investmentPerTrade.toFixed(2)}
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Risk/Trade<br />{riskPerTrade.toFixed(2)}
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Invested<br />{investedSum.toFixed(2)}
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Monthly P/L<br />
+                      <span style={{ color: monthlyPLTotal > 0 ? '#38a169' : monthlyPLTotal < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
+                        {monthlyPLTotal.toFixed(2)}
+                      </span>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Tax P/L<br />
+                      <span style={{ color: taxPL > 0 ? '#38a169' : taxPL < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
+                        {taxPL.toFixed(2)}
+                      </span>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Donation<br />
+                      <span style={{ color: donation > 0 ? '#38a169' : donation < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
+                        {donation.toFixed(2)}
+                      </span>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Monthly Gain<br />
+                      <span style={{ color: monthlyGain > 0 ? '#38a169' : monthlyGain < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
+                        {monthlyGain.toFixed(2)}
+                      </span>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Monthly % Gain<br />
+                      <span style={{ color: monthlyGainPercent > 0 ? '#38a169' : monthlyGainPercent < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
+                        {monthlyGainPercent.toFixed(2)}%
+                      </span>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Total Gain<br />
+                      <span style={{ color: monthlyGain > 0 ? '#38a169' : monthlyGain < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
+                        {monthlyGain.toFixed(2)}
+                      </span>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 }}>
+                    <Paper sx={{ 
+                      height: '50%', 
+                      minWidth: 0, 
+                      fontSize: { xs: '0.7rem', sm: '0.9rem', md: '1.1rem', lg: '1.3rem' },
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      p: { xs: 1, sm: 1.5, md: 2 },
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      Total % Gain<br />
+                      <span style={{ color: monthlyGainPercent > 0 ? '#38a169' : monthlyGainPercent < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
+                        {monthlyGainPercent.toFixed(2)}%
+                      </span>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              </Box>
+            </div>
+          </LocalizationProvider>
+        );
+      
+      case 'screener':
+        return (
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Box sx={{ width: '100%', p: { xs: 1, sm: 2 } }}>
+              <Typography 
+                variant="h4" 
+                gutterBottom 
+                sx={{ 
+                  color: '#2563eb', 
+                  fontWeight: 'bold', 
+                  mb: 3,
+                  fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' },
+                  textAlign: { xs: 'center', md: 'left' }
+                }}
+              >
+                Screener & Trade Entries
+              </Typography>
+              
+              {/* Upper section with Screener */}
+              <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, mb: 4 }}>
+                {/* Screener Section */}
+                <Card sx={{ minWidth: '400px', maxWidth: '520px', border: '2px solid #222', borderRadius: '18px' }}>
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <Typography 
+                      variant="h5" 
+                      gutterBottom 
+                      sx={{ 
+                        color: '#2563eb', 
+                        fontSize: { xs: '1.3em', sm: '1.6em', md: '2em' }, 
+                        fontWeight: 'bold' 
+                      }}
+                    >
+                      Screener
+                    </Typography>
+                    
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                      <InputLabel sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>Select Screener</InputLabel>
+                      <Select
+                        value={selectedScreener}
+                        onChange={(e) => {
+                          setSelectedScreener(e.target.value);
+                          setStocksPage(1);
+                        }}
+                        label="Select Screener"
+                        sx={{ 
+                          fontSize: { xs: '0.9em', sm: '1.1em' }, 
+                          backgroundColor: 'white', 
+                          color: '#2563eb' 
+                        }}
+                      >
+                        <MenuItem value="">Select Screener</MenuItem>
+                        {screeners.map((screener) => (
+                          <MenuItem key={screener.id || screener.screener_name} value={screener.screener_name || screener.name}>
+                            {screener.screener_name || screener.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    
+                    <Typography 
+                      variant="h6" 
+                      gutterBottom 
+                      sx={{ 
+                        fontSize: { xs: '1.2em', sm: '1.5em', md: '1.8em' }, 
+                        mb: 2 
+                      }}
+                    >
+                      Stocks in Screener
+                    </Typography>
+                    
+                    {loadingStocks ? (
+                      <Typography sx={{ fontSize: { xs: '0.9em', sm: '1.1em' } }}>Loading stocks...</Typography>
+                    ) : screenerStocks.length === 0 ? (
+                      <Typography color="textSecondary" sx={{ fontSize: { xs: '0.9em', sm: '1.1em' } }}>
+                        No stocks found for this screener.
+                      </Typography>
+                    ) : (
+                      <>
+                        <TableContainer component={Paper} sx={{ 
+                          mt: 2, 
+                          border: '2px solid #222', 
+                          borderRadius: '12px',
+                          maxHeight: { xs: '250px', sm: '300px' },
+                          overflow: 'auto'
+                        }}>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow sx={{ background: '#fff' }}>
+                                <TableCell sx={{ 
+                                  fontSize: { xs: '0.9em', sm: '1.15em' }, 
+                                  textAlign: 'center', 
+                                  borderBottom: '2px solid #222',
+                                  fontWeight: 'bold'
+                                }}>
+                                  Stock
+                                </TableCell>
+                                <TableCell sx={{ 
+                                  fontSize: { xs: '0.9em', sm: '1.15em' }, 
+                                  textAlign: 'center', 
+                                  borderBottom: '2px solid #222',
+                                  fontWeight: 'bold'
+                                }}>
+                                  Action
+                                </TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {paginatedStocks.map((stock, idx) => (
+                                <TableRow key={stock + idx} sx={{ 
+                                  background: '#fff', 
+                                  borderBottom: '1px solid #222' 
+                                }}>
+                                  <TableCell sx={{ 
+                                    fontSize: { xs: '0.85em', sm: '1.1em' }, 
+                                    textAlign: 'center', 
+                                    borderRight: '1px solid #222' 
+                                  }}>
+                                    {stock}
+                                  </TableCell>
+                                  <TableCell sx={{ fontSize: { xs: '0.85em', sm: '1.1em' }, textAlign: 'center' }}>
+                                    <Button
+                                      variant="outlined"
+                                      size="small"
+                                      onClick={() => handleTradeStock(stock)}
+                                      sx={{
+                                        fontSize: { xs: '0.8em', sm: '1.1em' },
+                                        backgroundColor: 'white',
+                                        color: '#2563eb',
+                                        borderColor: '#2563eb',
+                                        padding: { xs: '4px 8px', sm: '6px 16px' },
+                                        '&:hover': {
+                                          backgroundColor: '#e3f0ff'
+                                        }
+                                      }}
+                                    >
+                                      Trade
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                        
+                        {/* Pagination */}
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'center', 
+                          alignItems: 'center', 
+                          mt: 2, 
+                          gap: 1,
+                          flexDirection: { xs: 'column', sm: 'row' }
+                        }}>
+                          <Button
+                            size="small"
+                            disabled={stocksPage === 1}
+                            onClick={() => setStocksPage(stocksPage - 1)}
+                            sx={{ 
+                              fontSize: { xs: '0.85em', sm: '1.1em' }, 
+                              color: '#2563eb', 
+                              borderColor: '#2563eb' 
+                            }}
+                          >
+                            Prev
+                          </Button>
+                          <Typography sx={{ fontSize: { xs: '0.85em', sm: '1.1em' } }}>
+                            Page {stocksPage} of {totalPages}
+                          </Typography>
+                          <Button
+                            size="small"
+                            disabled={stocksPage === totalPages}
+                            onClick={() => setStocksPage(stocksPage + 1)}
+                            sx={{ 
+                              fontSize: { xs: '0.85em', sm: '1.1em' }, 
+                              color: '#2563eb', 
+                              borderColor: '#2563eb' 
+                            }}
+                          >
+                            Next
+                          </Button>
+                        </Box>
+                        <Typography variant="body2" sx={{ fontSize: { xs: '0.85em', sm: '1.1em' }, mt: 1 }}>
+                          Total stocks: {screenerStocks.length}
+                        </Typography>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </Box>
+
+              {/* Trade Entries Table Section */}
+              <Card sx={{ minWidth: '400px', maxWidth: '520px', border: '2px solid #222', borderRadius: '12px' }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h5" sx={{ color: '#2563eb', fontWeight: 'bold' }}>
+                      Trade Entries
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      onClick={handleAddRow}
+                      sx={{
+                        background: '#e3f0ff',
+                        color: '#2563eb',
+                        fontWeight: 700,
+                        fontSize: '1.15em',
+                        border: 'none',
+                        borderRadius: '16px',
+                        padding: '14px 24px',
+                        boxShadow: '0 2px 8px rgba(37,99,235,0.08)',
+                        '&:hover': {
+                          background: '#d1e7ff'
+                        }
+                      }}
+                    >
+                      Add Trade Entry
+                    </Button>
+                  </Box>
+                  
+                  {/* Scrollable Trade Entries Table */}
+                  <Box sx={{ 
+                    overflowX: 'auto', 
+                    overflowY: 'auto',
+                    maxHeight: '480px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    backgroundColor: darkMode ? '#1e293b' : '#fff',
+                    '&::-webkit-scrollbar': {
+                      width: '12px',
+                      height: '12px'
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: darkMode ? '#0f172a' : '#e5e7eb',
+                      borderRadius: '6px'
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: '#2563eb',
+                      borderRadius: '6px',
+                      border: darkMode ? '2px solid #1e293b' : '2px solid #fff'
+                    },
+                    '&::-webkit-scrollbar-thumb:hover': {
+                      background: '#1d4ed8'
+                    },
+                    '&::-webkit-scrollbar-corner': {
+                      background: darkMode ? '#1e293b' : '#fff'
+                    }
+                  }}>
+                    <Table sx={{ 
+                      minWidth: '1400px', 
+                      background: darkMode ? '#1e293b' : '#fff', 
+                      border: `2px solid ${darkMode ? '#374151' : '#222'}` 
+                    }}>
+                      <TableHead>
+                        <TableRow sx={{ background: darkMode ? '#374151' : '#fff' }}>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '60px'
+                          }}>#</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '120px'
+                          }}>Stock</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '100px'
+                          }}>CMP</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '100px'
+                          }}>SLP</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '100px'
+                          }}>TGTP</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '80px'
+                          }}>SL</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '80px'
+                          }}>TGT</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '100px'
+                          }}>STB-SL</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '100px'
+                          }}>STB-IPT</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '80px'
+                          }}>STB</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '80px'
+                          }}>SB</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '100px'
+                          }}>Invested</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '100px'
+                          }}>RSI</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '140px'
+                          }}>Candle</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '100px'
+                          }}>Volume</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '100px'
+                          }}>P/L</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '140px'
+                          }}>Entry</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '140px'
+                          }}>Exit</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '100px'
+                          }}>Booked</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '80px'
+                          }}>r:R</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '100px'
+                          }}>Tenure</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '140px'
+                          }}>Remarks</TableCell>
+                          <TableCell sx={{ 
+                            borderBottom: `2px solid ${darkMode ? '#4b5563' : '#222'}`, 
+                            fontSize: '1.16em', 
+                            fontWeight: 'bold',
+                            color: darkMode ? '#fff' : '#000',
+                            minWidth: '140px'
+                          }}>Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {entries.map((row, idx) => (
+                          <TableRow key={idx} sx={{ 
+                            background: '#fff', 
+                            borderBottom: '1px solid #222',
+                            '& td': { textAlign: 'center' }
+                          }}>
+                            <TableCell sx={{ 
+                              color: '#2563eb', 
+                              fontSize: { xs: '0.8em', sm: '1em', md: '1.13em' }, 
+                              minWidth: { xs: '30px', sm: '40px', md: '50px' }
+                            }}>
+                              {idx + 1}
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '120px' }}>
+                              <TextField
+                                size="small"
+                                value={row.stock || ""}
+                                onChange={(e) => {
+                                  const updated = [...entries];
+                                  updated[idx] = computeRow({ ...row, stock: e.target.value });
+                                  setEntries(updated);
+                                }}
+                                sx={{
+                                  minWidth: '120px',
+                                  '& .MuiInputBase-input': {
+                                    background: '#fff',
+                                    border: '1px solid #222',
+                                    color: '#2563eb',
+                                    fontSize: { xs: '0.8em', sm: '1em', md: '1.13em' },
+                                    padding: { xs: '4px', sm: '6px', md: '8px' }
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '96px' }}>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.cmp || ""}
+                                onChange={(e) => {
+                                  const updated = [...entries];
+                                  updated[idx] = computeRow({ ...row, cmp: e.target.value });
+                                  setEntries(updated);
+                                }}
+                                sx={{
+                                  minWidth: '96px',
+                                  '& .MuiInputBase-input': {
+                                    background: '#fff',
+                                    border: '1px solid #222',
+                                    color: '#2563eb',
+                                    fontSize: '1.13em'
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '96px' }}>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.slp || ""}
+                                onChange={(e) => {
+                                  const updated = [...entries];
+                                  updated[idx] = computeRow({ ...row, slp: e.target.value });
+                                  setEntries(updated);
+                                }}
+                                sx={{
+                                  minWidth: '96px',
+                                  '& .MuiInputBase-input': {
+                                    background: '#fff',
+                                    border: '1px solid #222',
+                                    color: '#2563eb',
+                                    fontSize: '1.13em'
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '96px' }}>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.tgtp || ""}
+                                onChange={(e) => {
+                                  const updated = [...entries];
+                                  updated[idx] = computeRow({ ...row, tgtp: e.target.value });
+                                  setEntries(updated);
+                                }}
+                                sx={{
+                                  minWidth: '96px',
+                                  '& .MuiInputBase-input': {
+                                    background: '#fff',
+                                    border: '1px solid #222',
+                                    color: '#2563eb',
+                                    fontSize: '1.13em'
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ color: '#2563eb', fontSize: '1.13em', minWidth: '50px' }}>
+                              {row.sl}
+                            </TableCell>
+                            <TableCell sx={{ color: '#2563eb', fontSize: '1.13em', minWidth: '50px' }}>
+                              {row.tgt}
+                            </TableCell>
+                            <TableCell sx={{ color: '#2563eb', fontSize: '1.13em', minWidth: '70px' }}>
+                              {row.stb_sl}
+                            </TableCell>
+                            <TableCell sx={{ color: '#2563eb', fontSize: '1.13em', minWidth: '70px' }}>
+                              {row.stb_ipt}
+                            </TableCell>
+                            <TableCell sx={{ color: '#2563eb', fontSize: '1.13em', minWidth: '50px' }}>
+                              {row.stb}
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '96px' }}>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.sb || ""}
+                                onChange={(e) => {
+                                  let val = Number(e.target.value);
+                                  if (val > row.stb) {
+                                    alert('SB cannot be greater than STB. Value will be reset to 0.');
+                                    val = 0;
+                                  }
+                                  const updated = [...entries];
+                                  updated[idx] = computeRow({ ...row, sb: val });
+                                  setEntries(updated);
+                                }}
+                                sx={{
+                                  minWidth: '96px',
+                                  '& .MuiInputBase-input': {
+                                    background: '#fff',
+                                    border: '1px solid #222',
+                                    color: '#2563eb',
+                                    fontSize: '1.13em'
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ color: '#2563eb', fontSize: '1.13em', minWidth: '80px' }}>
+                              {row.invested}
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '120px' }}>
+                              <Select
+                                size="small"
+                                value={row.rsi || ""}
+                                onChange={(e) => {
+                                  const updated = [...entries];
+                                  updated[idx] = computeRow({ ...row, rsi: e.target.value });
+                                  setEntries(updated);
+                                }}
+                                sx={{
+                                  background: '#fff',
+                                  border: '1px solid #222',
+                                  color: '#2563eb',
+                                  fontSize: '1.13em',
+                                  minWidth: '120px'
+                                }}
+                              >
+                                <MenuItem value="">Select</MenuItem>
+                                <MenuItem value="Yes">Yes</MenuItem>
+                                <MenuItem value="No">No</MenuItem>
+                              </Select>
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '168px' }}>
+                              <Select
+                                size="small"
+                                value={row.candle || ""}
+                                onChange={(e) => {
+                                  const updated = [...entries];
+                                  updated[idx] = computeRow({ ...row, candle: e.target.value });
+                                  setEntries(updated);
+                                }}
+                                sx={{
+                                  background: '#fff',
+                                  border: '1px solid #222',
+                                  color: '#2563eb',
+                                  fontSize: '1.13em',
+                                  minWidth: '168px'
+                                }}
+                              >
+                                <MenuItem value="">Select</MenuItem>
+                                <MenuItem value="Mazibozu">Mazibozu</MenuItem>
+                                <MenuItem value="Bullish">Bullish</MenuItem>
+                                <MenuItem value="Hammer">Hammer</MenuItem>
+                                <MenuItem value="Engulf">Engulf</MenuItem>
+                                <MenuItem value="Pin">Pin</MenuItem>
+                                <MenuItem value="Tweezer">Tweezer</MenuItem>
+                                <MenuItem value="Doji">Doji</MenuItem>
+                                <MenuItem value="Bearish">Bearish</MenuItem>
+                              </Select>
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '120px' }}>
+                              <Select
+                                size="small"
+                                value={row.volume || ""}
+                                onChange={(e) => {
+                                  const updated = [...entries];
+                                  updated[idx] = computeRow({ ...row, volume: e.target.value });
+                                  setEntries(updated);
+                                }}
+                                sx={{
+                                  background: '#fff',
+                                  border: '1px solid #222',
+                                  color: '#2563eb',
+                                  fontSize: '1.13em',
+                                  minWidth: '120px'
+                                }}
+                              >
+                                <MenuItem value="">Select</MenuItem>
+                                <MenuItem value="Yes">Yes</MenuItem>
+                                <MenuItem value="No">No</MenuItem>
+                              </Select>
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '132px' }}>
+                              <Select
+                                size="small"
+                                value={row.pl || ""}
+                                onChange={(e) => {
+                                  const updated = [...entries];
+                                  updated[idx] = computeRow({ ...row, pl: e.target.value });
+                                  setEntries(updated);
+                                }}
+                                sx={{
+                                  background: '#fff',
+                                  border: '1px solid #222',
+                                  color: '#2563eb',
+                                  fontSize: '1.13em',
+                                  minWidth: '132px'
+                                }}
+                              >
+                                <MenuItem value="">Select</MenuItem>
+                                <MenuItem value="Profit">Profit</MenuItem>
+                                <MenuItem value="Loss">Loss</MenuItem>
+                              </Select>
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '144px' }}>
+                              <DatePicker
+                                value={row.entry_date ? dayjs(row.entry_date) : null}
+                                onChange={(newValue) => {
+                                  const updated = [...entries];
+                                  updated[idx] = computeRow({ 
+                                    ...row, 
+                                    entry_date: newValue ? newValue.format('YYYY-MM-DD') : '' 
+                                  });
+                                  setEntries(updated);
+                                }}
+                                slotProps={{
+                                  textField: {
+                                    size: 'small',
+                                    sx: {
+                                      minWidth: '144px',
+                                      '& .MuiInputBase-input': {
+                                        background: '#fff',
+                                        border: '1px solid #222',
+                                        borderRadius: '8px',
+                                        color: '#2563eb',
+                                        fontSize: '1.089em',
+                                        padding: '8px'
+                                      }
+                                    }
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '144px' }}>
+                              <DatePicker
+                                value={row.exit_date ? dayjs(row.exit_date) : null}
+                                onChange={(newValue) => {
+                                  const updated = [...entries];
+                                  updated[idx] = computeRow({ 
+                                    ...row, 
+                                    exit_date: newValue ? newValue.format('YYYY-MM-DD') : '' 
+                                  });
+                                  setEntries(updated);
+                                }}
+                                slotProps={{
+                                  textField: {
+                                    size: 'small',
+                                    sx: {
+                                      minWidth: '144px',
+                                      '& .MuiInputBase-input': {
+                                        background: '#fff',
+                                        border: '1px solid #222',
+                                        borderRadius: '8px',
+                                        color: '#2563eb',
+                                        fontSize: '1.089em',
+                                        padding: '8px'
+                                      }
+                                    }
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ 
+                              color: Number(row.booked) > 0 ? '#38a169' : Number(row.booked) < 0 ? 'red' : '#2563eb',
+                              fontSize: '1.13em',
+                              minWidth: '80px',
+                              fontWeight: 'bold'
+                            }}>
+                              {row.booked}
+                            </TableCell>
+                            <TableCell sx={{ color: '#2563eb', fontSize: '1.13em', minWidth: '50px' }}>
+                              {row.rr}
+                            </TableCell>
+                            <TableCell sx={{ color: '#2563eb', fontSize: '1.13em', minWidth: '60px' }}>
+                              {getTenure(row.entry_date, row.exit_date)}
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '144px' }}>
+                              <TextField
+                                size="small"
+                                value={row.remarks || ""}
+                                onChange={(e) => {
+                                  const updated = [...entries];
+                                  updated[idx] = computeRow({ ...row, remarks: e.target.value });
+                                  setEntries(updated);
+                                }}
+                                sx={{
+                                  minWidth: '144px',
+                                  '& .MuiInputBase-input': {
+                                    background: '#fff',
+                                    border: '1px solid #222',
+                                    color: '#2563eb',
+                                    fontSize: '1.13em'
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ minWidth: '120px' }}>
+                              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                                {(!row.id || typeof row.id !== 'number') && (
+                                  <Button
+                                    size="small"
+                                    onClick={() => handleBuyRow(row, idx)}
+                                    sx={{
+                                      background: '#e3f0ff',
+                                      color: '#2563eb',
+                                      fontWeight: 700,
+                                      fontSize: '0.85em',
+                                      border: 'none',
+                                      borderRadius: '12px',
+                                      padding: '6px 12px',
+                                      minWidth: '50px',
+                                      '&:hover': {
+                                        background: '#d1e7ff'
+                                      }
+                                    }}
+                                  >
+                                    Buy
+                                  </Button>
+                                )}
+                                <Button
+                                  size="small"
+                                  onClick={() => handleSaveRow(row, idx)}
+                                  sx={{
+                                    background: '#e3f0ff',
+                                    color: '#2563eb',
+                                    fontWeight: 700,
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    padding: '6px 8px',
+                                    minWidth: '40px',
+                                    '&:hover': {
+                                      background: '#d1e7ff'
+                                    }
+                                  }}
+                                >
+                                  💾
+                                </Button>
+                                <Button
+                                  size="small"
+                                  onClick={() => handleDeleteRow(row, idx)}
+                                  sx={{
+                                    background: '#e3f0ff',
+                                    color: '#2563eb',
+                                    fontWeight: 700,
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    padding: '6px 8px',
+                                    minWidth: '40px',
+                                    '&:hover': {
+                                      background: '#d1e7ff'
+                                    }
+                                  }}
+                                >
+                                  🗑️
+                                </Button>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+          </LocalizationProvider>
+        );
+
+      case 'charts':
+        return (
+          <Box sx={{ p: 2 }}>
+            <Typography variant="h4" gutterBottom sx={{ color: '#2563eb', fontWeight: 'bold', mb: 3 }}>
+              Trading Charts
+            </Typography>
+            
+            <Grid container spacing={4}>
+              {/* First Chart */}
+              <Grid item xs={12} md={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>Monthly P/L</Typography>
+                    <PieChart
+                      series={[
+                        {
+                          data: pieData,
+                          innerRadius: 30,
+                          outerRadius: 100,
+                          paddingAngle: 5,
+                          cornerRadius: 5,
+                          startAngle: -90,
+                          endAngle: 90,
+                          cx: 150,
+                          cy: 150,
+                        },
+                      ]}
+                      width={400}
+                      height={300}
+                    />
+                  </CardContent>
+                </Card>
               </Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 , fontSize: '1.3rem'}}>
-                <Item sx={{ height: '50%', minWidth: 0 }}>
-                  Tax P/L<br />
-                  <span style={{ color: taxPL > 0 ? '#38a169' : taxPL < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
-                    {taxPL.toFixed(2)}
-                  </span>
-                </Item>
-              </Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 , fontSize: '1.3rem'}}>
-                <Item sx={{ height: '50%', minWidth: 0 }}>
-                  Donation<br />
-                  <span style={{ color: donation > 0 ? '#38a169' : donation < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
-                    {donation.toFixed(2)}
-                  </span>
-                </Item>
-              </Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 , fontSize: '1.3rem'}}>
-                <Item sx={{ height: '50%', minWidth: 0 }}>
-                  Monthly Gain<br />
-                  <span style={{ color: monthlyGain > 0 ? '#38a169' : monthlyGain < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
-                    {monthlyGain.toFixed(2)}
-                  </span>
-                </Item>
-              </Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 , fontSize: '1.3rem'}}>
-                <Item sx={{ height: '50%', minWidth: 0 }}>
-                  Monthly % Gain<br />
-                  <span style={{ color: monthlyGainPercent > 0 ? '#38a169' : monthlyGainPercent < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
-                    {monthlyGainPercent.toFixed(2)}
-                  </span>
-                </Item>
-              </Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 , fontSize: '1.3rem'}}>
-                <Item sx={{ height: '50%', minWidth: 0 }}>
-                  Total Gain<br />
-                  <span style={{ color: monthlyGainPercent > 0 ? '#38a169' : monthlyGainPercent < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
-                    {monthlyGainPercent.toFixed(2)}
-                  </span>
-                </Item>
-              </Grid>
-              <Grid item xs={1} sx={{ minWidth: 0, width: '20%', height: 120 , fontSize: '1.3rem'}}>
-                <Item sx={{ height: '50%', minWidth: 0 }}>
-                  Total % Gain<br />
-                  <span style={{ color: monthlyGainPercent > 0 ? '#38a169' : monthlyGainPercent < 0 ? 'red' : undefined, fontWeight: 'bold' }}>
-                    {monthlyGainPercent.toFixed(2)}
-                  </span>
-                </Item>
+
+              {/* Second Chart */}
+              <Grid item xs={12} md={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>Total P/L</Typography>
+                    <PieChart
+                      series={[
+                        {
+                          data: pieData,
+                          innerRadius: 30,
+                          outerRadius: 100,
+                          paddingAngle: 5,
+                          cornerRadius: 5,
+                          startAngle: -90,
+                          endAngle: 90,
+                          cx: 150,
+                          cy: 150,
+                        },
+                      ]}
+                      width={400}
+                      height={300}
+                    />
+                  </CardContent>
+                </Card>
               </Grid>
             </Grid>
           </Box>
-          {/* Pie charts below the Box and grids (side by side) */}
-          <div style={{ marginTop: 32, display: 'flex', flexDirection: 'row', justifyContent: 'center', gap: '48px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <h2 style={{ textAlign: 'center', fontSize: '1.5rem', fontWeight: 'bold', color: '#2563eb', marginBottom: '12px' }}>Monthly P/L</h2>
-              <PieChart
-                series={[{
-                  data: pieData,
-                  innerRadius: 30,
-                  outerRadius: 100,
-                  paddingAngle: 5,
-                  cornerRadius: 5,
-                  startAngle: -90,
-                  endAngle: 90,
-                  cx: 150,
-                  cy: 150,
-                  // Custom label rendering for bold and colored labels
-                  label: ({ data }) => (
-                    <text
-                      x={data.cx}
-                      y={data.cy - 110 + data.id * 30}
-                      textAnchor="middle"
-                      fontWeight="bold"
-                      fontSize="16"
-                      fill={data.label === 'Profit' ? '#38a169' : '#dc2626'}
-                    >
-                      {data.label}
-                    </text>
-                  ),
-                }]}
-                width={300}
-                height={300}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <h2 style={{ textAlign: 'center', fontSize: '1.5rem', fontWeight: 'bold', color: '#2563eb', marginBottom: '12px' }}>Total P/L</h2>
-              <PieChart
-                series={[{
-                  data: pieData,
-                  innerRadius: 30,
-                  outerRadius: 100,
-                  paddingAngle: 5,
-                  cornerRadius: 5,
-                  startAngle: -90,
-                  endAngle: 90,
-                  cx: 150,
-                  cy: 150,
-                  // Custom label rendering for bold and colored labels
-                  label: ({ data }) => (
-                    <text
-                      x={data.cx}
-                      y={data.cy - 110 + data.id * 30}
-                      textAnchor="middle"
-                      fontWeight="bold"
-                      fontSize="16"
-                      fill={data.label === 'Profit' ? '#38a169' : '#dc2626'}
-                    >
-                      {data.label}
-                    </text>
-                  ),
-                }]}
-                width={300}
-                height={300}
-              />
-            </div>
-          </div>
-        </div>
-        {/* Part 2: Screener dropdown at top, Stocks in Screener below */}
-        <div className="bg-white rounded-lg shadow p-6 min-w-[408px] max-w-[520px] flex flex-col items-center" style={{ color: '#2563eb', fontSize: '1.1em', border: '2px solid #222', borderRadius: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginTop : '10px',marginLeft: '90px', marginBottom: '10px'  }}>
-          <h2 className="text-lg font-bold mb-2 text-center" style={{ color: '#2563eb', fontSize: '2em' }}>Screener</h2>
-          <div className="w-full flex flex-col items-center mb-4" style={{ fontSize: '1.1em' }}>
-            <label htmlFor="screener-dropdown" className="font-medium mb-2 text-center" style={{ fontSize: '1.1em' }}>Select Screener:</label>
-            <select
-              id="screener-dropdown"
-              className="select select-bordered w-full max-w-[220px]"
-              style={{ fontSize: '1.1em', backgroundColor: 'white', color: '#2563eb' }}
-              value={selectedScreener}
-              onChange={e => { setSelectedScreener(e.target.value); setStocksPage(1); }}
-            >
-              <option value="" style={{ fontSize: '1.1em' }}>Select Screener</option>
-              {screeners.length === 0 && <option value="" disabled style={{ fontSize: '1.1em' }}>No screeners available</option>}
-              {screeners.map((screener) => (
-                <option key={screener.id || screener.screener_name} value={screener.screener_name} style={{ fontSize: '1.1em' }}>
-                  {screener.screener_name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <h3 className="text-md font-semibold mb-2 text-center" style={{ fontSize: '1.8em' , marginBottom: '-1%'}}>Stocks in Screener</h3>
-          {loadingStocks ? (
-            <div className="text-center" style={{ fontSize: '1.1em' }}>Loading stocks...</div>
-          ) : screenerStocks.length === 0 ? (
-            <div className="text-gray-500 text-center" style={{ fontSize: '1.1em' }}>No stocks found for this screener.</div>
-          ) : (
-            <>
-          <div className="flex justify-center" style={{ fontSize: '1.1em' }}>
-            <table className="table" style={{
-              marginLeft: '15px', marginRight: '15px', minWidth: '340px', maxWidth: '520px', marginTop: '15px', marginBottom: '15px',
-              background: '#fff',
-              border: '2px solid #222',
-              borderRadius: 'px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-              fontSize: '1.1em'
-            }}>
-              <thead>
-                <tr style={{ background: '#fff', fontSize: '1.1em' }}>
-                  <th style={{ width: '160px', padding: '8px 16px', fontSize: '1.15em', textAlign: 'center', borderBottom: '2px solid #222', borderTopLeftRadius: '12px' }}>Stock</th>
-                  <th style={{ width: '120px', padding: '8px 16px', fontSize: '1.15em', textAlign: 'center', borderBottom: '2px solid #222', borderTopRightRadius: '12px' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedStocks.map((stock, idx) => (
-                  <tr key={stock + idx} style={{ height: '40px', background: '#fff', borderBottom: '1px solid #222', fontSize: '1.1em' }}>
-                    <td style={{ padding: '8px 16px', fontSize: '1.1em', textAlign: 'center', borderRight: '1px solid #222' }}>{stock}</td>
-                    <td style={{ padding: '8px 16px', textAlign: 'center', fontSize: '1.1em' }}>
-                      <button className="btn btn-primary btn-sm" style={{ minWidth: '60px', fontSize: '1.1em', padding: '6px 12px',  backgroundColor: 'white', color: '#2563eb',  borderColor: '#2563eb'}} onClick={() => handleTradeStock(stock)}>
-                        Trade
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div >
-              {/* Pagination controls */}
-              <div className="flex flex-col items-center mt-2" style={{ fontSize: '1.1em' }}>
-                <div className="flex justify-center items-center mb-1" style={{ fontSize: '1.1em' }}>
-                  <button className="btn btn-xs mr-2" style={{ fontSize: '1.1em', backgroundColor: 'white', color: '#2563eb', borderColor: '#2563eb' }} disabled={stocksPage === 1} onClick={() => setStocksPage(stocksPage - 1)}>Prev</button>
-                  <span style={{ fontSize: '1.1em' , marginLeft: '2px'}}>Page {stocksPage} of {totalPages}</span>
-                  <button className="btn btn-xs ml-2" style={{ fontSize: '1.1em', backgroundColor: 'white', color: '#2563eb', borderColor: '#2563eb' }} disabled={stocksPage === totalPages} onClick={() => setStocksPage(stocksPage + 1)}>Next</button>
-                </div>
-                <div className="text-sm text-gray-600" style={{ fontSize: '1.1em' }}>Total stocks: {screenerStocks.length}</div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-      <div className="w-full max-w-full mx-auto space-y-8" style={{ maxWidth: 'calc(100vw - 40px)' }}>
-        {/* --- Trade Table Section --- */}
-        <div className="bg-white rounded-lg shadow p-6" style={{ color: '#2563eb', border: '2px solid #222', borderRadius: '12px', marginLeft: '21px', maxWidth: 'calc(100vw - 60px)', overflow: 'hidden' }}>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold" style={{ color: '#2563eb' }}>Trade Entries</h2>
-            <button 
-              className="btn" 
-              onClick={handleAddRow}
-              style={{
-                background: '#e3f0ff',
-                color: '#2563eb',
-                fontWeight: 700,
-                fontSize: '1.15em',
-                border: 'none',
-                borderRadius: '16px',
-                padding: '14px 24px',
-                boxShadow: '0 2px 8px rgba(37,99,235,0.08)',
-                cursor: 'pointer',
-                transition: 'background 0.2s',
-              }}
-            >
-              Add Trade Entry
-            </button>
-          </div>
-          {/* Main trade entries table */}
-          <div className="overflow-x-auto" style={{ maxWidth: '100%', overflowX: 'auto', overflowY: 'auto', WebkitOverflowScrolling: 'touch', marginLeft: '10px', marginRight: '10px', marginBottom: '15px', maxHeight: '480px', border: '1px solid #e5e7eb', scrollbarWidth: 'thin', scrollbarColor: '#2563eb #e5e7eb' }}>
-            <table className="table min-w-[1200px] w-full" style={{ background: '#fff', border: '2px solid #222', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', fontSize: '1.1em' }}>
-              <thead>
-                <tr style={{ background: '#fff' }}>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>#</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>Stock</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>CMP</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>SLP</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>TGTP</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>SL</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>TGT</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>STB-SL</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>STB-IPT</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>STB</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>SB</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>Invested</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>RSI</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>Candle</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>Volume</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>P/L</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>Entry</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>Exit</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>Booked</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>r:R</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>Tenure</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>Remarks</th>
-                  <th style={{ borderBottom: '2px solid #222', fontSize: '1.16em' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((row, idx) => (
-                  <tr key={idx} style={{ background: '#fff', borderBottom: '1px solid #222', fontSize: '1.1em', margin: '5px', textAlign: 'center' }}>
-                    {/* Trade row fields and actions */}
-                    <td style={{ color: '#2563eb', fontSize: '1.13em', alignItems: 'center', minWidth: '50px' }}>{idx + 1}</td>
-                  <td><input className="input input-bordered w-full" style={{ background: '#fff', border: '1px solid #222', color: '#2563eb', fontSize: '1.13em', minWidth: '100px' }} value={row.stock ?? ""} onChange={e => {
-                      const updated = [...entries];
-                      updated[idx] = computeRow({ ...row, stock: e.target.value });
-                      setEntries(updated);
-                    }} /></td>
-                  <td><input className="input input-bordered w-full" style={{ background: '#fff', border: '1px solid #222', color: '#2563eb', fontSize: '1.13em' , minWidth: '50px'}} type="number" value={row.cmp ?? ""} onChange={e => {
-                      const updated = [...entries];
-                      updated[idx] = computeRow({ ...row, cmp: e.target.value });
-                      setEntries(updated);
-                    }} /></td>
-                  <td><input className="input input-bordered w-full" style={{ background: '#fff', border: '1px solid #222', color: '#2563eb', fontSize: '1.13em' , minWidth: '50px' }} type="number" value={row.slp ?? ""} onChange={e => {
-                      const updated = [...entries];
-                      updated[idx] = computeRow({ ...row, slp: e.target.value });
-                      setEntries(updated);
-                    }} /></td>
-                  <td><input className="input input-bordered w-full" style={{ background: '#fff', border: '1px solid #222', color: '#2563eb', fontSize: '1.13em' , minWidth: '50px'}} type="number" value={row.tgtp ?? ""} onChange={e => {
-                      const updated = [...entries];
-                      updated[idx] = computeRow({ ...row, tgtp: e.target.value });
-                      setEntries(updated);
-                    }} /></td>
-                    <td style={{ color: '#2563eb', fontSize: '1.13em', alignItems: 'center', minWidth: '50px' }}>{row.sl}</td>
-                    <td style={{ color: '#2563eb', fontSize: '1.13em', alignItems: 'center', minWidth: '50px' }}>{row.tgt}</td>
-                    <td style={{ color: '#2563eb', fontSize: '1.13em', alignItems: 'center', minWidth: '50px' }}>{row.stb_sl}</td>
-                    <td style={{ color: '#2563eb', fontSize: '1.13em', alignItems: 'center', minWidth: '50px' }}>{row.stb_ipt}</td>
-                    <td style={{ color: '#2563eb', fontSize: '1.13em', alignItems: 'center', minWidth: '50px' }}>{row.stb}</td>
-                  <td><input className="input input-bordered w-full" style={{ background: '#fff', border: '1px solid #222', color: '#2563eb', fontSize: '1.13em' , minWidth: '50px'}} type="number" value={row.sb ?? ""} onChange={e => {
-                      let val = Number(e.target.value);
-                      if (val > row.stb) {
-                        alert('SB cannot be greater than STB. Value will be reset to 0.');
-                        val = 0;
+        );
+
+      case 'settings':
+        return (
+          <Box sx={{ p: 2 }}>
+            <Typography variant="h4" gutterBottom sx={{ color: '#2563eb', fontWeight: 'bold', mb: 3 }}>
+              Trading Settings
+            </Typography>
+            
+            {/* Investment Plan Section */}
+            <Card sx={{ mb: 4, border: '3px solid #2563eb', borderRadius: '24px' }}>
+              <CardContent sx={{ p: 4, textAlign: 'center' }}>
+                <Typography variant="h5" gutterBottom sx={{ 
+                  color: '#2563eb', 
+                  fontSize: '2.2em', 
+                  fontWeight: 800, 
+                  letterSpacing: '0.02em', 
+                  mb: 4 
+                }}>
+                  Investment Plan
+                </Typography>
+                
+                <Box component="form" onSubmit={handleSettingsSubmit} sx={{ width: '100%' }}>
+                  <Grid container spacing={3} sx={{ mb: 4 }}>
+                    {Object.keys(settingsForm).map((key) => (
+                      <Grid item xs={12} sm={6} md={4} key={key}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <Typography variant="body1" sx={{ 
+                            color: '#2563eb', 
+                            fontSize: '1.1em', 
+                            mb: 1, 
+                            fontWeight: 600,
+                            textTransform: 'capitalize'
+                          }}>
+                            {key.replace(/_/g, " ")}
+                          </Typography>
+                          <TextField
+                            type="number"
+                            step="0.01"
+                            name={key}
+                            value={settingsForm[key]}
+                            onChange={handleSettingsChange}
+                            size="small"
+                            placeholder={`Enter ${key.replace(/_/g, " ")}`}
+                            sx={{
+                              '& .MuiInputBase-input': {
+                                background: '#fff',
+                                border: '2px solid #2563eb',
+                                color: '#2563eb',
+                                fontSize: '1.13em',
+                                borderRadius: '12px',
+                                padding: '12px',
+                                textAlign: 'center',
+                                fontWeight: 600
+                              },
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                                '& fieldset': {
+                                  border: '2px solid #2563eb'
+                                }
+                              },
+                              maxWidth: '250px'
+                            }}
+                          />
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                  
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    sx={{
+                      background: '#e3f0ff',
+                      color: '#2563eb',
+                      fontWeight: 700,
+                      fontSize: '1.15em',
+                      border: 'none',
+                      borderRadius: '16px',
+                      padding: '14px 32px',
+                      boxShadow: '0 2px 8px rgba(37,99,235,0.08)',
+                      '&:hover': {
+                        background: '#d1e7ff'
                       }
-                      const updated = [...entries];
-                      updated[idx] = computeRow({ ...row, sb: val });
-                      setEntries(updated);
-                    }} /></td>
-                    <td style={{ color: '#2563eb', fontSize: '1.13em', alignItems: 'center', minWidth: '50px' }}>{row.invested}</td>
-                  <td><select className="select select-bordered w-full" style={{ background: '#fff', border: '1px solid #222', color: '#2563eb', fontSize: '1.13em', minWidth: '100px' }} value={row.rsi ?? ""} onChange={e => {
-                      const updated = [...entries];
-                      updated[idx] = computeRow({ ...row, rsi: e.target.value });
-                      setEntries(updated);
+                    }}
+                  >
+                    Save Settings
+                  </Button>
+                  
+                  {settingsMessage && (
+                    <Typography sx={{ 
+                      color: '#2563eb', 
+                      fontSize: '1.1em', 
+                      mt: 2, 
+                      fontWeight: 600 
                     }}>
-                      <option value="">Select</option>
-                      <option value="Yes">Yes</option>
-                      <option value="No">No</option>
-                    </select></td>
-                  <td><select className="select select-bordered w-full" style={{ background: '#fff', border: '1px solid #222', color: '#2563eb', fontSize: '1.13em', minWidth: '140px' }} value={row.candle ?? ""} onChange={e => {
-                      const updated = [...entries];
-                      updated[idx] = computeRow({ ...row, candle: e.target.value });
-                      setEntries(updated);
-                    }}>
-                      <option value="">Select</option>
-                      <option value="Mazibozu">Mazibozu</option>
-                      <option value="Bullish">Bullish</option>
-                      <option value="Hammer">Hammer</option>
-                      <option value="Engulf">Engulf</option>
-                      <option value="Pin">Pin</option>
-                      <option value="Tweezer">Tweezer</option>
-                      <option value="Doji">Doji</option>
-                      <option value="Bearish">Bearish</option>
-                    </select></td>
-                  <td><select className="select select-bordered w-full" style={{ background: '#fff', border: '1px solid #222', color: '#2563eb', fontSize: '1.13em', minWidth: '100px' }} value={row.volume ?? ""} onChange={e => {
-                      const updated = [...entries];
-                      updated[idx] = computeRow({ ...row, volume: e.target.value });
-                      setEntries(updated);
-                    }}>
-                      <option value="">Select</option>
-                      <option value="Yes">Yes</option>
-                      <option value="No">No</option>
-                    </select></td>
-                  <td><select className="select select-bordered w-full" style={{ background: '#fff', border: '1px solid #222', color: '#2563eb', fontSize: '1.13em', minWidth: '110px' }} value={row.pl ?? ""} onChange={e => {
-                      const updated = [...entries];
-                      updated[idx] = computeRow({ ...row, pl: e.target.value });
-                      setEntries(updated);
-                    }}>
-                      <option value="">Select</option>
-                      <option value="Profit">Profit</option>
-                      <option value="Loss">Loss</option>
-                    </select></td>
-                  <td>
-                    <DatePicker
-                      value={row.entry_date ? dayjs(row.entry_date) : null}
-                      onChange={(newValue) => {
-                        const updated = [...entries];
-                        updated[idx] = computeRow({ ...row, entry_date: newValue ? newValue.format('YYYY-MM-DD') : '' });
-                        setEntries(updated);
-                      }}
-                      slotProps={{
-                        textField: {
-                          size: 'small',
-                          style: { 
-                            background: '#fff', 
-                            border: '1px solid #222', 
-                            borderRadius: '8px',
-                            minWidth: '100px'
-                          },
-                          InputProps: {
-                            style: {
-                              color: '#2563eb',
-                              fontSize: '1.089em',
-                              padding: '1px 1px',
-                              marginRight: '2px',
-                              marginLeft: '5px'
-                            }
-                          }
-                        }
-                      }}
-                    />
-                  </td>
-                  <td>
-                    <DatePicker
-                      value={row.exit_date ? dayjs(row.exit_date) : null}
-                      onChange={(newValue) => {
-                        const updated = [...entries];
-                        updated[idx] = computeRow({ ...row, exit_date: newValue ? newValue.format('YYYY-MM-DD') : '' });
-                        setEntries(updated);
-                      }}
-                      slotProps={{
-                        textField: {
-                          size: 'small',
-                          style: { 
-                            background: '#fff', 
-                            border: '1px solid #222', 
-                            borderRadius: '8px',
-                            minWidth: '100px'
-                          },
-                          InputProps: {
-                            style: {
-                              color: '#2563eb',
-                              fontSize: '1.089em',
-                              padding: '1px 1px',
-                              marginRight: '2px',
-                              marginLeft: '5px'
-                            }
-                          }
-                        }
-                      }}
-                    />
-                  </td>
-                    <td style={{ color: Number(row.booked) > 0 ? '#38a169' : Number(row.booked) < 0 ? 'red' : undefined , fontSize: '1.13em', alignItems: 'center', minWidth: '50px'}}>
-                      {row.booked}
-                    </td>
-                    <td style={{ color: '#2563eb', fontSize: '1.13em', alignItems: 'center', minWidth: '50px' }}>{row.rr}</td>
-                    <td style={{ color: '#2563eb', fontSize: '1.13em', alignItems: 'center', minWidth: '50px' }}>{getTenure(row.entry_date, row.exit_date)}</td>
-                  <td><input className="input input-bordered w-full" style={{ background: '#fff', border: '1px solid #222', color: '#2563eb', fontSize: '1.13em' }} value={row.remarks ?? ""} onChange={e => {
-                      const updated = [...entries];
-                      updated[idx] = computeRow({ ...row, remarks: e.target.value });
-                      setEntries(updated);
-                    }} /></td>
-                    <td>
-                      {/* Arrange Save/Buy and Delete icons horizontally using flex */}
-                      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-                        {/* {(row.id && typeof row.id === 'number') ?  */}
-                        {(!row.id && typeof row.id !== 'number') ? 
-                        (
-                          <button 
-                            className="btn btn-xs" 
-                            onClick={() => handleBuyRow(row, idx)}
-                            style={{
-                              background: '#e3f0ff',
-                              color: '#2563eb',
-                              fontWeight: 700,
-                              fontSize: '0.85em',
-                              border: 'none',
-                              borderRadius: '12px',
-                              padding: '6px 12px',
-                              boxShadow: '0 2px 8px rgba(37,99,235,0.08)',
-                              cursor: 'pointer',
-                              transition: 'background 0.2s',
-                            }}
-                          >
-                            Buy
-                          </button>
-                        )
-                        : (<></>)
-                        // (
-                        //   <button 
-                        //     className="btn btn-xs" 
-                        //     onClick={() => handleBuyRow(row, idx)}
-                        //     style={{
-                        //       background: '#e3f0ff',
-                        //       color: '#2563eb',
-                        //       fontWeight: 700,
-                        //       fontSize: '0.85em',
-                        //       border: 'none',
-                        //       borderRadius: '12px',
-                        //       padding: '6px 12px',
-                        //       boxShadow: '0 2px 8px rgba(37,99,235,0.08)',
-                        //       cursor: 'pointer',
-                        //       transition: 'background 0.2s',
-                        //     }}
-                        //   >
-                        //     Buy
-                        //   </button>
-                        // )
-                        }
-                                                  <button 
-                            className="btn btn-xs" 
-                            onClick={() => handleSaveRow(row, idx)}
-                            style={{
-                              background: '#e3f0ff',
-                              color: '#2563eb',
-                              fontWeight: 700,
-                              border: 'none',
-                              borderRadius: '12px',
-                              padding: '6px 8px',
-                              boxShadow: '0 2px 8px rgba(37,99,235,0.08)',
-                              cursor: 'pointer',
-                              transition: 'background 0.2s',
-                            }}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}>
-                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="#e0f2fe" />
-                              <path d="M6 3v5a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3" />
-                              <line x1="9" y1="15" x2="15" y2="15" />
-                              <line x1="9" y1="19" x2="15" y2="19" />
-                            </svg>
-                          </button>
-                        <button 
-                          className="btn btn-xs" 
-                          onClick={() => handleDeleteRow(row, idx)}
-                          style={{
-                            background: '#e3f0ff',
-                            color: '#2563eb',
+                      {settingsMessage}
+                    </Typography>
+                  )}
+                </Box>
+              </CardContent>
+            </Card>
+
+            {/* Screener Management Section */}
+            <Card sx={{ border: '3px solid #2563eb', borderRadius: '24px' }}>
+              <CardContent sx={{ p: 4 }}>
+                <Typography variant="h5" gutterBottom sx={{ 
+                  color: '#2563eb', 
+                  fontSize: '1.8em', 
+                  textAlign: 'center', 
+                  mb: 3, 
+                  fontWeight: 700 
+                }}>
+                  Screeners Management
+                </Typography>
+                
+                {/* Screener Table */}
+                <Box sx={{ 
+                  maxHeight: '300px', 
+                  overflowY: 'auto',
+                  border: '2px solid #2563eb',
+                  borderRadius: '12px',
+                  mb: 3
+                }}>
+                  <Table sx={{ 
+                    background: '#fff', 
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)' 
+                  }}>
+                    <TableHead>
+                      <TableRow sx={{ background: '#e3f0ff' }}>
+                        {screenerTableColumns.map(col => (
+                          <TableCell key={col} sx={{ 
+                            color: '#2563eb', 
+                            fontSize: '1.1em', 
+                            padding: '12px', 
+                            borderBottom: '2px solid #2563eb', 
                             fontWeight: 700,
-                            border: 'none',
-                            borderRadius: '12px',
-                            padding: '6px 8px',
-                            boxShadow: '0 2px 8px rgba(37,99,235,0.08)',
-                            cursor: 'pointer',
-                            transition: 'background 0.2s',
-                          }}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}>
-                            <rect x="3" y="6" width="18" height="15" rx="2" fill="#e0f2fe" />
-                            <path d="M9 10v6M15 10v6" stroke="#2563eb" />
-                            <path d="M4 6h16" stroke="#2563eb" />
-                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#2563eb" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-    </LocalizationProvider>
+                            textTransform: 'capitalize'
+                          }}>
+                            {col.replace(/_/g, " ")}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {screeners.length === 0 ? (
+                        <TableRow>
+                          <TableCell 
+                            colSpan={screenerTableColumns.length} 
+                            sx={{ 
+                              color: '#2563eb', 
+                              fontSize: '1.1em', 
+                              padding: '20px', 
+                              textAlign: 'center' 
+                            }}
+                          >
+                            No screeners found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        screeners.map((screener, idx) => (
+                          <TableRow key={idx} sx={{ borderBottom: '1px solid #e3f0ff' }}>
+                            {screenerTableColumns.map(col => (
+                              <TableCell key={col} sx={{ 
+                                color: '#2563eb', 
+                                fontSize: '1.05em', 
+                                padding: '12px', 
+                                textAlign: 'center' 
+                              }}>
+                                {screener[col]?.toString() || ""}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </Box>
+                
+                {/* Action Buttons */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 2, 
+                  justifyContent: 'center', 
+                  flexWrap: 'wrap' 
+                }}>
+                  <Button
+                    variant="contained"
+                    onClick={() => setShowAddScreenerModal(true)}
+                    sx={{
+                      background: '#e3f0ff',
+                      color: '#2563eb',
+                      fontWeight: 700,
+                      fontSize: '1.15em',
+                      border: 'none',
+                      borderRadius: '16px',
+                      padding: '14px 24px',
+                      boxShadow: '0 2px 8px rgba(37,99,235,0.08)',
+                      '&:hover': {
+                        background: '#d1e7ff'
+                      }
+                    }}
+                  >
+                    Add Screener
+                  </Button>
+                  
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={darkMode}
+                        onChange={toggleTheme}
+                      />
+                    }
+                    label="Dark Mode"
+                    sx={{ 
+                      '& .MuiFormControlLabel-label': {
+                        color: '#2563eb',
+                        fontWeight: 600,
+                        fontSize: '1.1em'
+                      }
+                    }}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+
+            {/* Add Screener Modal */}
+            {showAddScreenerModal && (
+              <Box sx={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1300
+              }}>
+                <Card sx={{
+                  border: '3px solid #2563eb',
+                  borderRadius: '24px',
+                  background: '#fff',
+                  p: 4,
+                  boxShadow: '0 4px 24px rgba(37,99,235,0.08)',
+                  maxWidth: '420px',
+                  width: '90%',
+                  textAlign: 'center'
+                }}>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ 
+                      color: '#2563eb', 
+                      fontSize: '1.8em', 
+                      fontWeight: 800, 
+                      letterSpacing: '0.02em', 
+                      mb: 3 
+                    }}>
+                      Add Screener
+                    </Typography>
+                    
+                    <TextField
+                      fullWidth
+                      placeholder="Screener Name"
+                      value={newScreenerName}
+                      onChange={(e) => setNewScreenerName(e.target.value)}
+                      disabled={addScreenerLoading}
+                      sx={{
+                        mb: 2,
+                        '& .MuiInputBase-input': {
+                          background: '#fff',
+                          border: '2px solid #2563eb',
+                          color: '#2563eb',
+                          fontSize: '1.13em',
+                          borderRadius: '12px',
+                          padding: '12px',
+                          textAlign: 'center',
+                          fontWeight: 600
+                        },
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '12px',
+                          '& fieldset': {
+                            border: '2px solid #2563eb'
+                          }
+                        }
+                      }}
+                    />
+                    
+                    {addScreenerError && (
+                      <Typography color="error" sx={{ fontSize: '1.05em', mb: 2 }}>
+                        {addScreenerError}
+                      </Typography>
+                    )}
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '80%', mx: 'auto' }}>
+                      <Button
+                        variant="contained"
+                        onClick={handleAddScreener}
+                        disabled={addScreenerLoading || !newScreenerName}
+                        sx={{
+                          background: '#e3f0ff',
+                          color: '#2563eb',
+                          fontWeight: 700,
+                          fontSize: '1.1em',
+                          border: 'none',
+                          borderRadius: '12px',
+                          padding: '12px 0',
+                          boxShadow: '0 2px 8px rgba(37,99,235,0.08)',
+                          '&:hover': {
+                            background: '#d1e7ff'
+                          }
+                        }}
+                      >
+                        {addScreenerLoading ? "Verifying..." : "Verify & Add"}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        onClick={() => setShowAddScreenerModal(false)}
+                        disabled={addScreenerLoading}
+                        sx={{
+                          color: '#2563eb',
+                          borderColor: '#2563eb',
+                          fontWeight: 700,
+                          fontSize: '1.1em',
+                          borderRadius: '12px',
+                          padding: '12px 0',
+                          '&:hover': {
+                            background: '#e3f0ff',
+                            borderColor: '#2563eb'
+                          }
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Box>
+            )}
+          </Box>
+        );
+
+      default:
+        return (
+          <Box>
+            <Typography variant="h4" gutterBottom>Risk Management & ROI Portfolio</Typography>
+            <Typography>Manage your investment risk and track ROI</Typography>
+          </Box>
+        );
+    }
+  };
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ display: "flex" }}>
+        {/* AppBar */}
+        <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+          <Toolbar>
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={toggleDrawer(true)}
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
+              Kite AlgoTrading
+            </Typography>
+            
+            {/* Theme Switch */}
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={darkMode}
+                  onChange={toggleTheme}
+                  icon={<Brightness7Icon />}
+                  checkedIcon={<Brightness4Icon />}
+                />
+              }
+              label=""
+              sx={{ ml: 1 }}
+            />
+          </Toolbar>
+        </AppBar>
+
+        {/* Drawer */}
+        <Drawer
+          anchor="left"
+          open={drawerOpen}
+          onClose={toggleDrawer(false)}
+          sx={{
+            '& .MuiDrawer-paper': {
+              width: 280,
+              boxSizing: 'border-box',
+              mt: '64px', // Account for AppBar height
+              height: 'calc(100vh - 64px)',
+            },
+          }}
+        >
+          <Box
+            role="presentation"
+            onClick={toggleDrawer(false)}
+            onKeyDown={toggleDrawer(false)}
+          >
+            <Typography variant="h6" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+              Navigation Menu
+            </Typography>
+            <List>
+              {menuItems.map((item) => (
+                <ListItem 
+                  button 
+                  key={item.id}
+                  onClick={() => handleMenuItemClick(item.id)}
+                  selected={activeSection === item.id}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.primary.main + '20',
+                      borderRight: `3px solid ${theme.palette.primary.main}`,
+                    },
+                    '&.Mui-selected:hover': {
+                      backgroundColor: theme.palette.primary.main + '30',
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: activeSection === item.id ? theme.palette.primary.main : 'inherit' }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.label} 
+                    sx={{ 
+                      '& .MuiListItemText-primary': {
+                        fontWeight: activeSection === item.id ? 600 : 400,
+                        color: activeSection === item.id ? theme.palette.primary.main : 'inherit'
+                      }
+                    }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Box>
+        </Drawer>
+
+        {/* Main Content */}
+        <Box 
+          component="main" 
+          sx={{ 
+            flexGrow: 1, 
+            p: 3, 
+            mt: 8,
+            backgroundColor: theme.palette.background.default,
+            minHeight: 'calc(100vh - 64px)'
+          }}
+        >
+          {renderMainContent()}
+        </Box>
+      </Box>
+    </ThemeProvider>
   );
-}
+};
+
+export default AppProvider;
