@@ -158,7 +158,27 @@ if not DEBUG:
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = [
+if os.getenv('ENVIRONMENT') == 'local':
+    # Allow all origins during local development
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    # Production - be more specific with allowed origins
+    CORS_ALLOW_ALL_ORIGINS = False
+    
+    # Get CORS origins from environment variable or use defaults
+    cors_origins_env = os.getenv('CORS_ALLOWED_ORIGINS', '')
+    if cors_origins_env:
+        CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_env.split(',')]
+    else:
+        CORS_ALLOWED_ORIGINS = [
+            "https://algotrading-frontend.onrender.com",
+            "https://kite-algotrading-production.up.railway.app",
+            "https://algotrading-frontend.up.railway.app",
+            "https://algotrading-frontend.railway.app",
+        ]
+
+# Local development origins (always included)
+CORS_ALLOWED_ORIGINS_LOCAL = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
@@ -167,15 +187,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.1.6:3000",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
-    "https://algotrading-backend.onrender.com",
-    "https://algotrading-frontend.onrender.com",
-    "https://kite-algotrading-production.up.railway.app",
-    "https://algotrading-frontend.up.railway.app",
-    "https://algotrading-frontend.railway.app",
 ]
 
-# Allow all origins during development (less secure)
-CORS_ALLOW_ALL_ORIGINS = True
+# Combine production and local origins
+if not CORS_ALLOW_ALL_ORIGINS:
+    CORS_ALLOWED_ORIGINS.extend(CORS_ALLOWED_ORIGINS_LOCAL)
 
 # Allow credentials to be included in CORS requests
 CORS_ALLOW_CREDENTIALS = True
@@ -191,6 +207,31 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'cache-control',
+    'pragma',
+]
+
+# Allow specific methods
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Preflight request cache time
+CORS_PREFLIGHT_MAX_AGE = 86400
+
+# CSRF settings for CORS
+CSRF_TRUSTED_ORIGINS = [
+    "https://algotrading-frontend.onrender.com",
+    "https://kite-algotrading-production.up.railway.app",
+    "https://algotrading-frontend.up.railway.app",
+    "https://algotrading-frontend.railway.app",
+    "http://localhost:3000",
+    "http://localhost:5173",
 ]
 
 # REST Framework settings
