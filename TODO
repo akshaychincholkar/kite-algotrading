@@ -15,9 +15,12 @@ Todo:
     ✔ TODO: Refine the entire trade UI and registration UI. @done(25-07-26 02:31)
     ✔ TODO: Add Hello Username to the top of the page @started(25-07-26 03:30) @done(25-07-26 03:57) @lasted(27m6s)
     ✔ TODO: settings page polishing @started(25-07-26 20:06) @done(25-07-26 20:06) @lasted(56s)
-    ☐ TODO: Mobile responsiveness for the entire UI
+    ☐ TODO: Mobile responsiveness for the entire UI @started(25-07-29 10:02)
+    ☐ TODO: Update the theme switch dark mode swtich @started(25-07-29 23:22)
+    ☐ TODO: Update the UI menus like the Shivyog Sadhna
 
   ☐ Features
+    ☐ TODO: Add the deletion logic for the screener
     ☐ TODO: Add the monthly view to the user trades by filtering the trades
     ☐ TODO: Define the impersonation of the user trades to view the trades of the user
     ☐ TODO: Create the separate buttons to view into the groww and zerodha

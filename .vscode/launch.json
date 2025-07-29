@@ -14,10 +14,12 @@
             "django": true,
             "autoStartBrowser": false,
             "program": "${workspaceFolder}\\backend\\manage.py",
+            "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "envFile": "${workspaceFolder}/.env.development",
             "env": {
                 "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
+                "PYTHONPATH": "${workspaceFolder}\\backend",
+                "ENVIRONMENT": "local"
             },
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}\\backend"

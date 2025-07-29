@@ -24,12 +24,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-1*cjz4-m0lyfmo0@@3jg#m0xdl7ft3srpx(kk7ww6r8s*bb8ef'
+if os.getenv('ENVIRONMENT') == 'local':
+    SECRET_KEY = 'django-insecure-1*cjz4-m0lyfmo0@@3jg#m0xdl7ft3srpx(kk7ww6r8s*bb8ef'
+else:
+    SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-1*cjz4-m0lyfmo0@@3jg#m0xdl7ft3srpx(kk7ww6r8s*bb8ef')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+if os.getenv('ENVIRONMENT') == 'local':
+    DEBUG = True
+else:
+    DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '.onrender.com', 'algotrading-backend.onrender.com']
+if os.getenv('ENVIRONMENT') == 'local':
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '192.168.1.6', '*']
+else:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '.onrender.com', 'algotrading-backend.onrender.com']
 
 
 # Application definition
@@ -81,18 +90,23 @@ WSGI_APPLICATION = 'money_multiplier.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR.parent / 'db.sqlite3',
-#     }
-# }
-DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:///db.sqlite3',
-        conn_max_age=600
-    )
-}
+# Check if running in local environment
+if os.getenv('ENVIRONMENT') == 'local':
+    # Use SQLite for local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR.parent / 'db.sqlite3',
+        }
+    }
+else:
+    # Use PostgreSQL or other database for production
+    DATABASES = {
+        'default': dj_database_url.config(
+            default='sqlite:///db.sqlite3',
+            conn_max_age=600
+        )
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -147,6 +161,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://192.168.1.6:5173",
+    "http://192.168.1.6:3000",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
     "https://algotrading-backend.onrender.com",
