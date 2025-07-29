@@ -173,7 +173,7 @@ const AppProvider = () => {
   // API helper function
   const getApiUrl = (endpoint) => {
     const baseUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://kite-algotrading-production.up.railway.app' 
+      ? 'https://algotrading-backend.onrender.com' 
       : 'http://localhost:8000';
     return `${baseUrl}/${endpoint}`;
   };
