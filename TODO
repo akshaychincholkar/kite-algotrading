@@ -15,11 +15,14 @@ Todo:
     ✔ TODO: Refine the entire trade UI and registration UI. @done(25-07-26 02:31)
     ✔ TODO: Add Hello Username to the top of the page @started(25-07-26 03:30) @done(25-07-26 03:57) @lasted(27m6s)
     ✔ TODO: settings page polishing @started(25-07-26 20:06) @done(25-07-26 20:06) @lasted(56s)
-    ☐ TODO: Mobile responsiveness for the entire UI @started(25-07-29 10:02)
-    ☐ TODO: Update the theme switch dark mode swtich @started(25-07-29 23:22)
-    ☐ TODO: Update the UI menus like the Shivyog Sadhna
+    ✔ TODO: Mobile responsiveness for the entire UI @started(25-07-29 10:02) @done(25-07-30 10:11) @lasted(1d9m43s)
+    ✔ TODO: Update the theme switch dark mode swtich @started(25-07-29 23:22) @done(25-07-30 10:11) @lasted(10h49m45s)
+    ✔ TODO: Update the UI menus like the Shivyog Sadhna @done(25-07-30 10:11)
+    ☐ TODO: Add the logout button to the UI @started(25-07-30 10:19)
+    ☐ TODO: Update the Entries table to view and resize the 
 
   ☐ Features
+    ☐ TODO: Add the screener to display the prices of the stocks
     ☐ TODO: Add the deletion logic for the screener
     ☐ TODO: Add the monthly view to the user trades by filtering the trades
     ☐ TODO: Define the impersonation of the user trades to view the trades of the user
@@ -36,13 +39,13 @@ Todo:
 
   ☐ Fixes
     ☐ FIXME: /user_roi and /screener APIs are working without authentication, need to fix it
-    ☐ FIXME: Remove the unwanted screeners
+    ✔ FIXME: Remove the unwanted screeners @done(25-07-30 10:13)
     ☐ FIXME: Check from the database if the entry is present and then only display buy/save
     ☐ FIXME: When you click on the save button for the trade, it also saves user_roi data, however, it takes away the data from the row which is not yet saved.
     ☐ FIXME: Do code refactoring of frontend and backend
-    ☐ FIXME: Update the backend calls from localhost to the production server
-    ☐ FIXME: Fix the globalParameters logic in the frontend to use the global parameters from the backend
-    ☐ FIXME: Fix the generate token issue for the user other than the first user @started(25-07-26 02:33)
+    ✔ FIXME: Update the backend calls from localhost to the production server @done(25-07-30 10:14)
+    ✔ FIXME: Fix the globalParameters logic in the frontend to use the global parameters from the backend @done(25-07-30 10:14)
+    ✔ FIXME: Fix the generate token issue for the user other than the first user @started(25-07-26 02:33) @done(25-07-30 10:14) @lasted(4d7h41m6s)
 
   ☐ Configuration/Deployment
     ✔ TODO: Setup the gitlab for the project in your own workspace @done(25-07-26 02:34)

@@ -47,6 +47,7 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import SettingsIcon from "@mui/icons-material/Settings";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
+import LogoutIcon from "@mui/icons-material/Logout";
 
 const AppProvider = () => {
   const [drawerOpen, setDrawerOpen] = useState(false); // Drawer is collapsed (closed) by default
@@ -184,6 +185,12 @@ const AppProvider = () => {
 
   const toggleTheme = () => {
     setDarkMode(!darkMode);
+  };
+
+  // Logout function
+  const handleLogout = () => {
+    // Route to home page
+    window.location.href = "/";
   };
 
   // Create theme based on dark mode state
@@ -566,7 +573,7 @@ const AppProvider = () => {
 
   // On mount: handle request_token and fetch trades for user
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+        const params = new URLSearchParams(window.location.search);
     const requestToken = params.get("request_token");
     if (requestToken) {
       axios.post(getApiUrl("api/generate-token/"), { request_token: requestToken })
@@ -2265,6 +2272,16 @@ const AppProvider = () => {
               label=""
               sx={{ ml: 1 }}
             />
+            
+            {/* Logout Button */}
+            <IconButton
+              color="inherit"
+              onClick={handleLogout}
+              sx={{ ml: 2 }}
+              title="Logout"
+            >
+              <LogoutIcon />
+            </IconButton>
           </Toolbar>
         </AppBar>
 
