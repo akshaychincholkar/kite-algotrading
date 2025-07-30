@@ -2256,7 +2256,7 @@ const AppProvider = () => {
               <MenuIcon />
             </IconButton>
             <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
-              Kite AlgoTrading
+              Money Multiplier⚡
             </Typography>
             
             {/* Theme Switch */}
