@@ -90,16 +90,57 @@ def open_chartink_browser_and_print_scan_clause(scanner_name):
         print(f"Creating Chrome session for screener: {scanner_name}")
         print(f"Using user data directory: {user_data_dir}")
         
-        # Create ChromeDriver service if chromedriver path exists
+        # Try to create ChromeDriver service with multiple fallback methods
         service = None
-        if os.path.exists('/usr/local/bin/chromedriver'):
-            service = Service('/usr/local/bin/chromedriver')
+        driver = None
         
-        # Create driver with options
-        if service:
-            driver = webdriver.Chrome(service=service, options=chrome_options)
-        else:
-            driver = webdriver.Chrome(options=chrome_options)
+        # Method 1: Try using existing chromedriver in standard locations
+        chromedriver_paths = ['/usr/local/bin/chromedriver', '/usr/bin/chromedriver']
+        for path in chromedriver_paths:
+            if os.path.exists(path):
+                print(f"Found ChromeDriver at: {path}")
+                try:
+                    service = Service(path)
+                    break
+                except Exception as e:
+                    print(f"Failed to create service with {path}: {e}")
+                    continue
+        
+        # Method 2: Use WebDriverManager as fallback (downloads driver automatically)
+        if service is None:
+            try:
+                print("ChromeDriver not found locally, using WebDriverManager...")
+                from webdriver_manager.chrome import ChromeDriverManager
+                driver_path = ChromeDriverManager().install()
+                print(f"ChromeDriver installed at: {driver_path}")
+                service = Service(driver_path)
+            except Exception as e:
+                print(f"WebDriverManager failed: {e}")
+        
+        # Method 3: Try creating driver with different approaches
+        driver_creation_methods = [
+            # Try with service
+            lambda: webdriver.Chrome(service=service, options=chrome_options) if service else None,
+            # Try without service (let Selenium auto-detect)
+            lambda: webdriver.Chrome(options=chrome_options),
+        ]
+        
+        for i, method in enumerate(driver_creation_methods):
+            if driver is not None:
+                break
+            try:
+                print(f"Trying driver creation method {i + 1}...")
+                result = method()
+                if result is not None:
+                    driver = result
+                    print(f"Successfully created driver with method {i + 1}")
+                    break
+            except Exception as e:
+                print(f"Driver creation method {i + 1} failed: {e}")
+                continue
+        
+        if driver is None:
+            raise Exception("All driver creation methods failed")
         
         print("Successfully created Chrome WebDriver")
         
@@ -137,6 +178,17 @@ def open_chartink_browser_and_print_scan_clause(scanner_name):
         
     except Exception as e:
         print(f"Error in browser automation for {scanner_name}: {e}")
+        
+        # Try fallback method before giving up
+        try:
+            print("Attempting fallback method...")
+            from .fallback_screener import fallback_get_scan_clause
+            fallback_result = fallback_get_scan_clause(scanner_name)
+            if fallback_result:
+                return fallback_result
+        except Exception as fallback_error:
+            print(f"Fallback method also failed: {fallback_error}")
+        
         raise Exception(f"Browser automation failed: {e}")
         
     finally:

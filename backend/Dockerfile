@@ -41,23 +41,53 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install ChromeDriver using multiple methods for maximum compatibility
-# Method 1: Try to install matching version
-RUN CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d. -f1-3) \
-    && echo "Chrome version: $CHROME_VERSION" \
-    && DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION" || curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE") \
-    && echo "Driver version: $DRIVER_VERSION" \
-    && wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip" \
-    && unzip /tmp/chromedriver.zip -d /tmp/ \
-    && mv /tmp/chromedriver /usr/local/bin/ \
-    && chmod +x /usr/local/bin/chromedriver \
-    && rm /tmp/chromedriver.zip
+# Method 1: Direct download with fallback versions
+RUN CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d. -f1) \
+    && echo "Chrome major version: $CHROME_VERSION" \
+    && for version in $CHROME_VERSION 114 113 112; do \
+        echo "Trying ChromeDriver version for Chrome $version" \
+        && DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$version" 2>/dev/null || echo "") \
+        && if [ ! -z "$DRIVER_VERSION" ]; then \
+            echo "Found driver version: $DRIVER_VERSION" \
+            && wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip" 2>/dev/null \
+            && if [ -f /tmp/chromedriver.zip ]; then \
+                unzip /tmp/chromedriver.zip -d /tmp/ \
+                && mv /tmp/chromedriver /usr/local/bin/ \
+                && chmod +x /usr/local/bin/chromedriver \
+                && rm /tmp/chromedriver.zip \
+                && break; \
+            fi; \
+        fi; \
+    done
 
-# Method 2: Create symlinks for better compatibility
+# Method 2: Fallback to latest stable if version matching fails
+RUN if [ ! -f /usr/local/bin/chromedriver ]; then \
+        echo "Version matching failed, downloading latest stable..." \
+        && LATEST_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE") \
+        && wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/$LATEST_VERSION/chromedriver_linux64.zip" \
+        && unzip /tmp/chromedriver.zip -d /tmp/ \
+        && mv /tmp/chromedriver /usr/local/bin/ \
+        && chmod +x /usr/local/bin/chromedriver \
+        && rm /tmp/chromedriver.zip; \
+    fi
+
+# Method 3: Create symlinks and make available in PATH
 RUN ln -sf /usr/local/bin/chromedriver /usr/bin/chromedriver \
-    && ln -sf /usr/bin/google-chrome /usr/bin/chromium-browser
+    && ln -sf /usr/bin/google-chrome /usr/bin/chromium-browser \
+    && which chromedriver \
+    && which google-chrome
 
-# Verify installations
-RUN google-chrome --version && chromedriver --version
+# Verify installations and create a test script
+RUN google-chrome --version \
+    && chromedriver --version \
+    && echo '#!/bin/bash\necho "Chrome: $(which google-chrome)"\necho "ChromeDriver: $(which chromedriver)"\ngoogle-chrome --version\nchromedriver --version' > /usr/local/bin/verify-chrome \
+    && chmod +x /usr/local/bin/verify-chrome \
+    && echo "Chrome and ChromeDriver verification completed"
+
+# Create additional environment setup
+RUN echo 'export PATH="/usr/local/bin:/usr/bin:$PATH"' >> /etc/environment \
+    && echo 'export CHROME_BIN=/usr/bin/google-chrome' >> /etc/environment \
+    && echo 'export CHROMEDRIVER_PATH=/usr/local/bin/chromedriver' >> /etc/environment
 
 # Set work directory
 WORKDIR /app
@@ -76,6 +106,9 @@ RUN pip install --no-cache-dir -r requirements-prod.txt
 
 # Copy project
 COPY . .
+
+# Make startup script executable
+RUN chmod +x startup.sh check_chrome_env.py
 
 # Create directories for Chrome user data with proper permissions
 RUN mkdir -p /tmp/chrome-user-data \
@@ -102,4 +135,4 @@ USER appuser
 EXPOSE 8000
 
 # Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "backend.wsgi:application"]
+CMD ["./startup.sh", "gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "backend.wsgi:application"]
