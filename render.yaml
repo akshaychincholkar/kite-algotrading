@@ -37,7 +37,9 @@ services:
         value: "https://algotrading-frontend.onrender.com,http://localhost:3000,http://localhost:5173"
       - key: ENVIRONMENT
         value: "production"
-
+    buildpacks:
+      - heroku/google-chrome
+      - heroku/chromedriver
 
 # services:
 #   # Django Backend API with SQLite
