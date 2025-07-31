@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 import json
 from .utils.chartink_screener import fetch_chartink_screener
-from .utils.kite_transaction_manager import place_market_order
+from .utils.kite_transaction_manager import place_market_order, set_gtt_oco
 from django.utils import timezone
 
 @api_view(['GET'])
@@ -149,3 +149,58 @@ def buy_stock(request):
         return JsonResponse({"message": f"Buy order placed for {stock_name}, quantity {quantity}"}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+@require_POST
+def set_gtt(request):
+    """
+    POST /gtt with JSON: {
+        "user_id": ..., 
+        "stock_name": ..., 
+        "quantity": ..., 
+        "stop_loss": ..., 
+        "target": ...
+    }
+    """
+    try:
+        data = json.loads(request.body.decode())
+        user_id = data.get("user_id")
+        stock_name = data.get("stock_name")
+        quantity = data.get("quantity")
+        stop_loss = data.get("stop_loss")
+        target = data.get("target")
+        
+        # Validate required parameters
+        if not all([user_id, stock_name, quantity, stop_loss, target]):
+            return JsonResponse({
+                "error": "Missing required parameters. Required: user_id, stock_name, quantity, stop_loss, target"
+            }, status=400)
+        
+        # Validate numeric parameters
+        try:
+            quantity = int(quantity)
+            stop_loss = float(stop_loss)
+            target = float(target)
+        except (ValueError, TypeError):
+            return JsonResponse({
+                "error": "Invalid parameter types. quantity must be integer, stop_loss and target must be numbers"
+            }, status=400)
+        
+        # Call the GTT OCO function
+        result = set_gtt_oco(user_id, stock_name, quantity, stop_loss, target)
+        
+        return JsonResponse({
+            "message": f"GTT OCO order set successfully for {stock_name}",
+            "gtt_id": result["gtt_id"],
+            "stock_name": result["stock_name"],
+            "quantity": result["quantity"],
+            "stop_loss": result["stop_loss"],
+            "target": result["target"],
+            "current_price": result["current_price"],
+            "status": result["status"]
+        }, status=200)
+        
+    except ValueError as e:
+        return JsonResponse({"error": f"Validation error: {str(e)}"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to set GTT: {str(e)}"}, status=500)

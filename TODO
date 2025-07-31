@@ -27,7 +27,7 @@ Todo:
     ☐ TODO: Add the monthly view to the user trades by filtering the trades
     ☐ TODO: Define the impersonation of the user trades to view the trades of the user
     ☐ TODO: Create the separate buttons to view into the groww and zerodha
-    ☐ TODO: Add the GTT orders to the trades while buying the stocks
+    ✘ TODO: Add the GTT orders to the trades while buying the stocks @started(25-08-01 00:05) @cancelled(25-08-01 01:22) @wasted(1h17m47s)
     ☐ TODO: Add the total profit stats too
     ☐ TODO: Sell feature in the trading once user marks as loss or profit
     ☐ TODO: Scheduled Buy or sell of the stocks
@@ -43,6 +43,7 @@ Todo:
     ☐ FIXME: Check from the database if the entry is present and then only display buy/save
     ☐ FIXME: When you click on the save button for the trade, it also saves user_roi data, however, it takes away the data from the row which is not yet saved.
     ☐ FIXME: Do code refactoring of frontend and backend
+    ✔ FIXME: Display the price in the Screener table @started(25-08-01 00:17) @done(25-08-01 01:23) @lasted(1h6m3s)
     ✔ FIXME: Update the backend calls from localhost to the production server @done(25-07-30 10:14)
     ✔ FIXME: Fix the globalParameters logic in the frontend to use the global parameters from the backend @done(25-07-30 10:14)
     ✔ FIXME: Fix the generate token issue for the user other than the first user @started(25-07-26 02:33) @done(25-07-30 10:14) @lasted(4d7h41m6s)

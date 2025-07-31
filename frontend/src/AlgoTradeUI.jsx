@@ -233,10 +233,15 @@ const AppProvider = () => {
   };
 
   // Add stock to Trade Entries at the top (from screener)
-  const handleTradeStock = (stockName) => {
+  const handleTradeStock = (stock) => {
+    // Handle both old format (string) and new format (object with symbol and price)
+    const stockName = typeof stock === 'string' ? stock : stock.symbol;
+    const stockPrice = typeof stock === 'object' && stock.price ? Math.floor(Number(stock.price)) : '';
+    
     const newEntry = computeRow({
       ...initialEntry,
-      stock: stockName
+      stock: stockName,
+      cmp: stockPrice // Set CMP from screener price as integer
     });
     setEntries(prev => [newEntry, ...prev]);
   };
@@ -244,11 +249,55 @@ const AppProvider = () => {
   // Helper to compute all derived fields for a row
   const computeRow = (row) => {
     const cmp = Number(row.cmp) || 0;
-    const slp = Number(row.slp) || 0;
-    const tgtp = Number(row.tgtp) || 0;
-    const sb = Number(row.sb) || 0;
+    let slp = Number(row.slp) || 0;
+    let tgtp = Number(row.tgtp) || 0;
+    
+    // Auto-calculate SLP and TGTP when CMP is set but SLP/TGTP are empty
+    if (cmp > 0) {
+      if (!row.slp || row.slp === '') {
+        slp = Math.floor(cmp * 0.97); // 3% less than CMP, rounded down to integer
+      }
+      if (!row.tgtp || row.tgtp === '') {
+        tgtp = Math.floor(cmp * 1.09); // 9% more than CMP, rounded down to integer
+      }
+    }
+    
     const sl = cmp - slp;
     const tgt = tgtp - cmp;
+    
+    // Calculate STB first
+    const stb_sl = sl !== 0 ? Math.floor(riskPerTrade / sl) : 0;
+    const stb_ipt = cmp !== 0 ? Math.floor(investmentPerTrade / cmp) : 0;
+    let stb = '';
+    if (stb_sl > 0 && stb_ipt > 0) stb = Math.min(stb_sl, stb_ipt).toString();
+    else if (stb_sl > 0) stb = stb_sl.toString();
+    else if (stb_ipt > 0) stb = stb_ipt.toString();
+    
+    // Auto-update SB when STB is calculated but SB is empty
+    let sb = Number(row.sb) || 0;
+    if (stb && (!row.sb || row.sb === '')) {
+      sb = Number(stb);
+    }
+    
+    // Auto-set Entry date when SB is set for the first time
+    let entry_date = row.entry_date;
+    if (sb > 0 && (!row.entry_date || row.entry_date === '')) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      entry_date = `${yyyy}-${mm}-${dd}`;
+    }
+    
+    // Auto-set Exit date when P/L is marked as Profit or Loss for the first time
+    let exit_date = row.exit_date;
+    if ((row.pl === 'Profit' || row.pl === 'Loss') && (!row.exit_date || row.exit_date === '')) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      exit_date = `${yyyy}-${mm}-${dd}`;
+    }
     
     // Invested logic: CMP * SB only when P/L is not selected
     let invested;
@@ -266,17 +315,15 @@ const AppProvider = () => {
     let rr = '';
     if (row.pl === 'Profit' && sl !== 0 && sb !== 0) rr = ((booked / sb) / sl).toFixed(2);
     
-    const stb_sl = sl !== 0 ? Math.floor(riskPerTrade / sl) : 0;
-    const stb_ipt = cmp !== 0 ? Math.floor(investmentPerTrade / cmp) : 0;
-    let stb = '';
-    if (stb_sl > 0 && stb_ipt > 0) stb = Math.min(stb_sl, stb_ipt).toString();
-    else if (stb_sl > 0) stb = stb_sl.toString();
-    else if (stb_ipt > 0) stb = stb_ipt.toString();
-    
     const percent_pl = invested !== 0 ? ((booked / invested) * 100).toFixed(2) : '';
     
     return {
       ...row,
+      slp: slp, // Include calculated SLP
+      tgtp: tgtp, // Include calculated TGTP
+      sb: sb, // Include calculated SB from STB
+      entry_date: entry_date, // Include auto-set entry date
+      exit_date: exit_date, // Include auto-set exit date
       sl: sl.toFixed(2),
       tgt: tgt.toFixed(2),
       stb_sl,
@@ -330,6 +377,47 @@ const AppProvider = () => {
       }
     } catch (error) {
       alert('Error placing buy order: ' + (error?.response?.data?.error || error.message));
+    }
+  };
+
+  // GTT handler for Trade Entries
+  const handleGttRow = async (row, idx) => {
+    if (!user || !user.user_id || !row.stock) {
+      alert('Missing user or stock information');
+      return;
+    }
+    
+    // Validate required fields for GTT
+    if (!row.sb || Number(row.sb) <= 0) {
+      alert('Please set a valid quantity (SB) before setting GTT');
+      return;
+    }
+    if (!row.slp || Number(row.slp) <= 0) {
+      alert('Please set a valid stop loss price (SLP) before setting GTT');
+      return;
+    }
+    if (!row.tgtp || Number(row.tgtp) <= 0) {
+      alert('Please set a valid target price (TGTP) before setting GTT');
+      return;
+    }
+    
+    const payload = {
+      user_id: user.user_id,
+      stock_name: row.stock,
+      quantity: Number(row.sb),
+      stop_loss: Number(row.slp),
+      target: Number(row.tgtp)
+    };
+    
+    try {
+      const response = await axios.post(getApiUrl('api/gtt/'), payload);
+      if (response.status === 200) {
+        alert(`GTT order set successfully for ${row.stock}\nGTT ID: ${response.data.gtt_id}\nStop Loss: ${response.data.stop_loss}\nTarget: ${response.data.target}`);
+      } else {
+        alert('Failed to set GTT order.');
+      }
+    } catch (error) {
+      alert('Error setting GTT order: ' + (error?.response?.data?.error || error.message));
     }
   };
 
@@ -1113,13 +1201,21 @@ const AppProvider = () => {
                                   borderBottom: '2px solid #222',
                                   fontWeight: 'bold'
                                 }}>
+                                  Price (₹)
+                                </TableCell>
+                                <TableCell sx={{ 
+                                  fontSize: { xs: '0.9em', sm: '1.15em' }, 
+                                  textAlign: 'center', 
+                                  borderBottom: '2px solid #222',
+                                  fontWeight: 'bold'
+                                }}>
                                   Action
                                 </TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
                               {paginatedStocks.map((stock, idx) => (
-                                <TableRow key={stock + idx} sx={{ 
+                                <TableRow key={(stock.symbol || stock) + idx} sx={{ 
                                   background: '#fff', 
                                   borderBottom: '1px solid #222' 
                                 }}>
@@ -1128,7 +1224,16 @@ const AppProvider = () => {
                                     textAlign: 'center', 
                                     borderRight: '1px solid #222' 
                                   }}>
-                                    {stock}
+                                    {stock.symbol || stock}
+                                  </TableCell>
+                                  <TableCell sx={{ 
+                                    fontSize: { xs: '0.85em', sm: '1.1em' }, 
+                                    textAlign: 'center', 
+                                    borderRight: '1px solid #222',
+                                    color: '#2563eb',
+                                    fontWeight: 'bold'
+                                  }}>
+                                    ₹{stock.price || 'N/A'}
                                   </TableCell>
                                   <TableCell sx={{ fontSize: { xs: '0.85em', sm: '1.1em' }, textAlign: 'center' }}>
                                     <Button
@@ -1202,7 +1307,7 @@ const AppProvider = () => {
               </Box>
 
               {/* Trade Entries Table Section */}
-              <Card sx={{ minWidth: '400px', maxWidth: '700px', border: '2px solid #222', borderRadius: '12px' }}>
+              <Card sx={{ minWidth: '400px', maxWidth: '1600px', border: '2px solid #222', borderRadius: '12px' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="h5" sx={{ color: '#2563eb', fontWeight: 'bold' }}>
@@ -1755,29 +1860,50 @@ const AppProvider = () => {
                                 }}
                               />
                             </TableCell>
-                            <TableCell sx={{ minWidth: '120px' }}>
-                              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                            <TableCell sx={{ minWidth: '180px' }}>
+                              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
                                 {(!row.id || typeof row.id !== 'number') && (
-                                  <Button
-                                    size="small"
-                                    onClick={() => handleBuyRow(row, idx)}
-                                    sx={{
-                                      background: '#e3f0ff',
-                                      color: '#2563eb',
-                                      fontWeight: 700,
-                                      fontSize: '0.85em',
-                                      border: 'none',
-                                      borderRadius: '12px',
-                                      padding: '6px 12px',
-                                      minWidth: '50px',
-                                      '&:hover': {
-                                        background: '#d1e7ff'
-                                      }
-                                    }}
-                                  >
-                                    Buy
-                                  </Button>
+                                  <>
+                                    <Button
+                                      size="small"
+                                      onClick={() => handleBuyRow(row, idx)}
+                                      sx={{
+                                        background: '#e3f0ff',
+                                        color: '#2563eb',
+                                        fontWeight: 700,
+                                        fontSize: '0.85em',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        padding: '6px 12px',
+                                        minWidth: '50px',
+                                        '&:hover': {
+                                          background: '#d1e7ff'
+                                        }
+                                      }}
+                                    >
+                                      Buy
+                                    </Button>
+                                  </>
                                 )}
+                                    {/* <Button
+                                      size="small"
+                                      onClick={() => handleGttRow(row, idx)}
+                                      sx={{
+                                        background: '#fff3cd',
+                                        color: '#856404',
+                                        fontWeight: 700,
+                                        fontSize: '0.85em',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        padding: '6px 12px',
+                                        minWidth: '50px',
+                                        '&:hover': {
+                                          background: '#ffeeba'
+                                        }
+                                      }}
+                                    >
+                                      GTT
+                                    </Button>                                 */}
                                 <Button
                                   size="small"
                                   onClick={() => handleSaveRow(row, idx)}

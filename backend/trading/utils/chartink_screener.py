@@ -49,11 +49,16 @@ def fetch_chartink_screener(screener_name):
         response = session.post("https://chartink.com/screener/process", data=payload, headers=headers)
         response.raise_for_status()
         data = response.json()
-        stocks = [row["nsecode"] for row in data["data"]]
+        stocks_with_prices = []
         print(f"Stocks from screener: ")
-        # for stock in stocks:
-            # print(stock)
-        return stocks
+        for row in data["data"]:
+            stock_symbol = row["nsecode"]
+            stock_price = row.get("close", row.get("per_chg", "N/A"))  # Try 'close' first, fallback to 'per_chg'
+            stocks_with_prices.append({"symbol": stock_symbol, "price": stock_price})
+            print(f"{stock_symbol}: ₹{stock_price}")
+        
+        # Return stocks with prices instead of just symbols
+        return stocks_with_prices
     except Exception as e:
         print("Failed to fetch screener data:", e)
         return []
