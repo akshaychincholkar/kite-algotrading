@@ -108,7 +108,9 @@ RUN pip install --no-cache-dir -r requirements-prod.txt
 COPY . .
 
 # Make startup script executable
-RUN chmod +x startup.sh check_chrome_env.py
+RUN chmod +x startup.sh check_chrome_env.py test_screener_fix.py \
+    && echo '#!/bin/bash\necho "=== Testing Chrome Environment ==="\npython check_chrome_env.py\necho "=== Testing Django Health ==="\npython manage.py check\necho "=== Testing Screener Fix ==="\npython test_screener_fix.py' > test_all.sh \
+    && chmod +x test_all.sh
 
 # Create directories for Chrome user data with proper permissions
 RUN mkdir -p /tmp/chrome-user-data \

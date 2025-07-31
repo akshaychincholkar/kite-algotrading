@@ -22,14 +22,53 @@ def screener(request):
         user_id = data.get('user_id')
         if not screener_name or not user_id:
             return Response({'error': 'screener_name and user_id are required.'}, status=status.HTTP_400_BAD_REQUEST)
-        # Generate scan_clause using Chartink logic
-        try:
-            scan_clause = open_chartink_browser_and_print_scan_clause(screener_name)
-        except Exception as e:
-            # Log the error and return a proper error response
-            import logging
-            logging.error(f"Failed to generate scan_clause for {screener_name}: {e}")
-            return Response({'error': f'Failed to generate scan_clause: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if we're in a production environment and if Chrome is available
+        import os
+        is_production = any([
+            os.environ.get('RENDER'),
+            os.environ.get('RAILWAY_PROJECT_ID'),
+            os.environ.get('HEROKU_APP_NAME'),
+            os.environ.get('VERCEL'),
+            os.environ.get('NETLIFY'),
+        ])
+        
+        # Check if Chrome/ChromeDriver are available
+        chrome_available = any([
+            os.path.exists('/usr/bin/google-chrome'),
+            os.path.exists('/usr/bin/chromium-browser'),
+            os.path.exists('/usr/bin/google-chrome-stable')
+        ])
+        
+        chromedriver_available = any([
+            os.path.exists('/usr/local/bin/chromedriver'),
+            os.path.exists('/usr/bin/chromedriver')
+        ])
+        
+        print(f"Environment check - Production: {is_production}, Chrome: {chrome_available}, ChromeDriver: {chromedriver_available}")
+        
+        # Try to generate scan_clause with fallbacks
+        scan_clause = ""
+        
+        if chrome_available and chromedriver_available and not is_production:
+            # Only try browser automation in development with proper setup
+            try:
+                from .utils.chartink_scan_clause import open_chartink_browser_and_print_scan_clause
+                scan_clause = open_chartink_browser_and_print_scan_clause(screener_name)
+                print(f"Browser automation successful: {len(scan_clause) if scan_clause else 0} characters")
+            except Exception as e:
+                print(f"Browser automation failed: {e}")
+                scan_clause = ""
+        
+        # If browser automation failed or unavailable, try fallback method
+        if not scan_clause:
+            try:
+                from .utils.fallback_screener import fallback_get_scan_clause
+                scan_clause = fallback_get_scan_clause(screener_name)
+                print(f"Fallback method result: {len(scan_clause) if scan_clause else 0} characters")
+            except Exception as e:
+                print(f"Fallback method failed: {e}")
+                scan_clause = f"# Screener: {screener_name}\n# Please configure scan clause manually"
         serializer = ScreenerSerializer(data={
             'screener_name': str(screener_name),
             'user_id': str(user_id),
@@ -37,7 +76,35 @@ def screener(request):
         })
         if serializer.is_valid():
             screener_obj = serializer.save()
-            return Response({'success': True, 'screener_name': screener_obj.screener_name, 'scan_clause': screener_obj.scan_clause}, status=status.HTTP_201_CREATED)
+            
+            # Provide appropriate response based on the scan_clause content
+            response_data = {
+                'success': True, 
+                'screener_name': screener_obj.screener_name, 
+                'scan_clause': screener_obj.scan_clause,
+                'environment_info': {
+                    'is_production': is_production,
+                    'chrome_available': chrome_available,
+                    'chromedriver_available': chromedriver_available
+                }
+            }
+            
+            if not scan_clause or scan_clause.startswith('#'):
+                # Manual configuration needed
+                response_data.update({
+                    'message': 'Screener created successfully but requires manual scan clause configuration.',
+                    'warning': 'Automatic scan clause extraction failed',
+                    'instructions': {
+                        'step1': 'Go to https://chartink.com/screener and create your screener',
+                        'step2': 'Copy the scan clause from the screener',
+                        'step3': f'Use PATCH /api/screener/{screener_obj.id}/update-scan-clause/ with scan_clause in request body',
+                        'example_curl': f'curl -X PATCH {request.build_absolute_uri(f"/api/screener/{screener_obj.id}/update-scan-clause/")} -H "Content-Type: application/json" -d \'{{"scan_clause": "your_scan_clause_here"}}\''
+                    }
+                })
+            else:
+                response_data['message'] = 'Screener created successfully with automatic scan clause extraction.'
+            
+            return Response(response_data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     elif request.method == 'GET':

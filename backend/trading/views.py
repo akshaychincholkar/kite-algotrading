@@ -17,11 +17,111 @@ from django.utils import timezone
 @api_view(['GET'])
 def health_check(request):
     """Health check endpoint for deployment monitoring"""
+    import os
+    
+    # Check Chrome and ChromeDriver availability
+    chrome_available = any([
+        os.path.exists('/usr/bin/google-chrome'),
+        os.path.exists('/usr/bin/chromium-browser'),
+        os.path.exists('/usr/bin/google-chrome-stable')
+    ])
+    
+    chromedriver_available = any([
+        os.path.exists('/usr/local/bin/chromedriver'),
+        os.path.exists('/usr/bin/chromedriver')
+    ])
+    
+    is_production = any([
+        os.environ.get('RENDER'),
+        os.environ.get('RAILWAY_PROJECT_ID'),
+        os.environ.get('HEROKU_APP_NAME'),
+        os.environ.get('VERCEL'),
+        os.environ.get('NETLIFY'),
+    ])
+    
     return Response({
         'status': 'healthy',
         'message': 'Django application is running',
-        'timestamp': str(timezone.now())
+        'timestamp': str(timezone.now()),
+        'environment': {
+            'is_production': is_production,
+            'chrome_available': chrome_available,
+            'chromedriver_available': chromedriver_available,
+            'automation_status': 'available' if chrome_available and chromedriver_available else 'fallback_mode'
+        }
     }, status=200)
+
+
+@api_view(['GET'])
+def test_screener(request):
+    """Test screener functionality endpoint"""
+    screener_name = request.GET.get('screener_name', 'test-screener')
+    
+    import os
+    
+    # Environment check
+    is_production = any([
+        os.environ.get('RENDER'),
+        os.environ.get('RAILWAY_PROJECT_ID'), 
+        os.environ.get('HEROKU_APP_NAME'),
+    ])
+    
+    chrome_available = any([
+        os.path.exists('/usr/bin/google-chrome'),
+        os.path.exists('/usr/bin/chromium-browser'),
+    ])
+    
+    chromedriver_available = any([
+        os.path.exists('/usr/local/bin/chromedriver'),
+        os.path.exists('/usr/bin/chromedriver')
+    ])
+    
+    result = {
+        'screener_name': screener_name,
+        'environment': {
+            'is_production': is_production,
+            'chrome_available': chrome_available,
+            'chromedriver_available': chromedriver_available,
+        },
+        'test_results': {}
+    }
+    
+    # Test fallback method
+    try:
+        from .utils.fallback_screener import test_fallback_screener
+        fallback_result = test_fallback_screener(screener_name)
+        result['test_results']['fallback'] = {
+            'success': bool(fallback_result),
+            'result_length': len(fallback_result) if fallback_result else 0,
+            'preview': fallback_result[:200] if fallback_result else None
+        }
+    except Exception as e:
+        result['test_results']['fallback'] = {
+            'success': False,
+            'error': str(e)
+        }
+    
+    # Test browser automation (only if not in production)
+    if not is_production and chrome_available and chromedriver_available:
+        try:
+            from .utils.chartink_scan_clause import open_chartink_browser_and_print_scan_clause
+            browser_result = open_chartink_browser_and_print_scan_clause(screener_name)
+            result['test_results']['browser'] = {
+                'success': bool(browser_result),
+                'result_length': len(browser_result) if browser_result else 0,
+                'preview': browser_result[:200] if browser_result else None
+            }
+        except Exception as e:
+            result['test_results']['browser'] = {
+                'success': False,
+                'error': str(e)
+            }
+    else:
+        result['test_results']['browser'] = {
+            'skipped': 'Production environment or Chrome not available'
+        }
+    
+    return Response(result, status=200)
 
 @api_view(['GET', 'PUT', 'DELETE'])
 def trade_detail(request, pk):
