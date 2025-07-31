@@ -45,6 +45,7 @@ lxml==4.9.3
 cssselect==1.2.0
 selenium==4.34.2
 selenium-wire==5.1.0
+webdriver-manager==4.0.1
 
 # Task scheduling and background jobs
 celery==5.4.0

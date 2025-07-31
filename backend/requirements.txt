@@ -74,3 +74,4 @@ gunicorn==22.0.0
 # WebSocket support (compatible version)
 websockets==10.4
 blinker==1.4
+webdriver-manager==4.0.1
