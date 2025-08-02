@@ -100,13 +100,71 @@ if os.getenv('ENVIRONMENT') == 'local':
         }
     }
 else:
-    # Use PostgreSQL or other database for production
-    DATABASES = {
-        'default': dj_database_url.config(
-            default='sqlite:///db.sqlite3',
-            conn_max_age=600
-        )
-    }
+    # Use PostgreSQL for production
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    
+    # If DATABASE_URL is not available, construct it from individual components
+    if not DATABASE_URL:
+        db_host = os.getenv('DB_HOST', 'dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com')
+        db_port = os.getenv('DB_PORT', '5432')
+        db_name = os.getenv('DB_NAME', 'algotrading_60j3')
+        db_user = os.getenv('DB_USER', 'algotrading_user')
+        db_password = os.getenv('DB_PASSWORD', 'KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x')
+        DATABASE_URL = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    
+    print(f"DEBUG: ENVIRONMENT = {os.getenv('ENVIRONMENT')}")
+    print(f"DEBUG: DATABASE_URL exists = {bool(DATABASE_URL)}")
+    
+    if DATABASE_URL:
+        # Mask password in debug output
+        masked_url = DATABASE_URL.replace(os.getenv('DB_PASSWORD', 'KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x'), '***')
+        print(f"DEBUG: DATABASE_URL = {masked_url}")
+        
+        try:
+            # Try using dj_database_url first
+            DATABASES = {
+                'default': dj_database_url.config(
+                    default=DATABASE_URL,
+                    conn_max_age=600,
+                    conn_health_checks=True,
+                )
+            }
+            print(f"DEBUG: Using dj_database_url with PostgreSQL")
+        except Exception as e:
+            print(f"DEBUG: dj_database_url failed: {e}")
+            # Manual PostgreSQL configuration as fallback
+            DATABASES = {
+                'default': {
+                    'ENGINE': 'django.db.backends.postgresql',
+                    'NAME': os.getenv('DB_NAME', 'algotrading_60j3'),
+                    'USER': os.getenv('DB_USER', 'algotrading_user'),
+                    'PASSWORD': os.getenv('DB_PASSWORD', 'KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x'),
+                    'HOST': os.getenv('DB_HOST', 'dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com'),
+                    'PORT': os.getenv('DB_PORT', '5432'),
+                    'OPTIONS': {
+                        'connect_timeout': 60,
+                        'sslmode': 'require',
+                    },
+                }
+            }
+            print(f"DEBUG: Using manual PostgreSQL configuration")
+    else:
+        # Use hardcoded production database credentials as fallback
+        print("DEBUG: No DATABASE_URL found, using hardcoded production database")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.getenv('DB_NAME', 'algotrading_60j3'),
+                'USER': os.getenv('DB_USER', 'algotrading_user'),
+                'PASSWORD': os.getenv('DB_PASSWORD', 'KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x'),
+                'HOST': os.getenv('DB_HOST', 'dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com'),
+                'PORT': os.getenv('DB_PORT', '5432'),
+                'OPTIONS': {
+                    'connect_timeout': 60,
+                    'sslmode': 'require',
+                },
+            }
+        }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

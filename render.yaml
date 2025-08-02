@@ -7,13 +7,23 @@ services:
     plan: free
     name: algotrading-backend
     runtime: python-3.11
-    buildCommand: "./build.sh"
-    startCommand: "cd backend && python -m gunicorn money_multiplier.wsgi:application"
+    buildCommand: "pip install --upgrade pip && pip install psycopg[binary]==3.2.9 && pip install -r backend/requirements-prod.txt && cd backend && python test_db_connection.py && python manage.py migrate --noinput"
+    startCommand: "cd backend && python -m gunicorn money_multiplier.wsgi:application --bind 0.0.0.0:$PORT"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: algotrading-backend
           property: connectionString
+      - key: DB_HOST
+        value: "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com"
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        value: "algotrading_60j3"
+      - key: DB_USER
+        value: "algotrading_user"
+      - key: DB_PASSWORD
+        value: "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x"
       - key: SECRET_KEY
         generateValue: true
       - key: WEB_CONCURRENCY
