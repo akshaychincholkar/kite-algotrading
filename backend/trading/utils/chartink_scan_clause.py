@@ -1,208 +1,293 @@
 
 
 
-import os
-import uuid
-import shutil
 from seleniumwire import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 import time
 import urllib.parse
+import time
+import json
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from urllib.parse import parse_qs, unquote
 
 
-def get_chrome_options():
-    """Get Chrome options optimized for production environments with unique user data directory"""
-    chrome_options = Options()
+def setup_driver():
+    """Setup Chrome WebDriver with enhanced options"""
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+    chrome_options.add_argument('--disable-extensions')
+    chrome_options.add_argument('--headless')  # Run in headless mode
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
     
-    # Create unique user data directory for each session
-    unique_id = str(uuid.uuid4())
-    user_data_dir = f"/tmp/chrome-user-data-{unique_id}"
+    # Selenium-wire options
+    seleniumwire_options = {
+        'verify_ssl': False,
+        'suppress_connection_errors': False,
+        'disable_encoding': True
+    }
     
-    # Essential arguments for production
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--disable-software-rasterizer")
-    chrome_options.add_argument("--disable-background-timer-throttling")
-    chrome_options.add_argument("--disable-backgrounding-occluded-windows")
-    chrome_options.add_argument("--disable-renderer-backgrounding")
-    chrome_options.add_argument("--disable-features=TranslateUI")
-    chrome_options.add_argument("--disable-extensions")
-    chrome_options.add_argument("--disable-plugins")
-    chrome_options.add_argument("--disable-default-apps")
-    chrome_options.add_argument("--disable-sync")
-    chrome_options.add_argument("--disable-translate")
-    chrome_options.add_argument("--hide-scrollbars")
-    chrome_options.add_argument("--metrics-recording-only")
-    chrome_options.add_argument("--mute-audio")
-    chrome_options.add_argument("--no-first-run")
-    chrome_options.add_argument("--safebrowsing-disable-auto-update")
-    chrome_options.add_argument("--disable-logging")
-    chrome_options.add_argument("--disable-permissions-api")
-    chrome_options.add_argument("--disable-presentation-api")
-    chrome_options.add_argument("--disable-print-preview")
-    chrome_options.add_argument("--disable-speech-api")
-    chrome_options.add_argument("--disable-file-system")
-    chrome_options.add_argument("--disable-web-security")
-    chrome_options.add_argument("--disable-features=VizDisplayCompositor")
-    chrome_options.add_argument("--window-size=1920,1080")
-    chrome_options.add_argument("--start-maximized")
-    chrome_options.add_argument("--remote-debugging-port=0")  # Use random port
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(
+        service=service,
+        options=chrome_options,
+        seleniumwire_options=seleniumwire_options
+    )
     
-    # Use unique user data directory
-    chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
+    # Hide automation traces
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
     
-    # Set user agent
-    chrome_options.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-    
-    # Production environment settings
-    if os.environ.get('RENDER') or os.environ.get('RAILWAY_ENVIRONMENT') or os.path.exists('/usr/bin/google-chrome'):
-        chrome_options.binary_location = "/usr/bin/google-chrome"
-    
-    return chrome_options, user_data_dir
+    return driver
 
 
-def cleanup_user_data_dir(user_data_dir):
-    """Clean up the temporary user data directory"""
+def wait_and_capture_requests(driver, wait_time=30):
+    """Wait for requests and capture scan_clause"""
+    print(f"Waiting {wait_time} seconds for network activity...")
+    print("Running in headless mode - monitoring automatically...")
+    
+    start_time = time.time()
+    scan_clause_found = None
+    
+    while time.time() - start_time < wait_time:
+        # Check requests every 2 seconds
+        for request in driver.requests:
+            if 'chartink.com' in request.url and request.body:
+                try:
+                    body_str = request.body.decode('utf-8')
+                    
+                    # Look for scan_clause in any form
+                    if 'scan_clause' in body_str:
+                        print(f"\n🎯 Found scan_clause in request to: {request.url}")
+                        # print(f"Method: {request.method}")
+                        # print(f"Headers: {dict(request.headers)}")
+                        
+                        # Extract scan_clause
+                        scan_clause = extract_scan_clause_from_body(body_str, request.headers)
+                        
+                        if scan_clause:
+                            print(f"\n{'='*60}")
+                            print("✅ SCAN CLAUSE PAYLOAD CAPTURED:")
+                            print(f"{'='*60}")
+                            print(scan_clause)
+                            print(f"{'='*60}")
+                            
+                            # Save to file
+                            # with open('c:\\workspace\\python\\kite\\screener_sample\\captured_scan_clause.txt', 'w', encoding='utf-8') as f:
+                            #     f.write(scan_clause)
+                            # print("✅ Saved to captured_scan_clause.txt")
+                            
+                            return scan_clause
+                            
+                except Exception as e:
+                    continue
+        
+        time.sleep(2)
+        remaining = wait_time - (time.time() - start_time)
+        if remaining > 0:
+            print(f"⏱️  Still monitoring... {remaining:.0f}s remaining")
+    
+    return scan_clause_found
+
+
+def extract_scan_clause_from_body(body_str, headers):
+    """Extract scan_clause from request body"""
     try:
-        if os.path.exists(user_data_dir):
-            shutil.rmtree(user_data_dir)
-            print(f"Cleaned up user data directory: {user_data_dir}")
+        content_type = str(headers.get('content-type', '')).lower()
+        
+        # Method 1: URL-encoded form data
+        if 'application/x-www-form-urlencoded' in content_type:
+            parsed_data = parse_qs(body_str)
+            if 'scan_clause' in parsed_data:
+                return unquote(parsed_data['scan_clause'][0])
+        
+        # Method 2: JSON data
+        elif 'application/json' in content_type:
+            json_data = json.loads(body_str)
+            return json_data.get('scan_clause')
+        
+        # Method 3: Direct string search for scan_clause=
+        if 'scan_clause=' in body_str:
+            import re
+            pattern = r'scan_clause=([^&\n\r]*)'
+            match = re.search(pattern, body_str)
+            if match:
+                return unquote(match.group(1))
+        
+        # Method 4: JSON-like pattern in string
+        if 'scan_clause' in body_str:
+            import re
+            # Look for "scan_clause":"value" or 'scan_clause':'value'
+            patterns = [
+                r'"scan_clause"\s*:\s*"([^"]*)"',
+                r"'scan_clause'\s*:\s*'([^']*)'",
+                r'scan_clause\s*:\s*"([^"]*)"',
+                r'scan_clause\s*:\s*\'([^\']*)\''
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, body_str)
+                if match:
+                    return match.group(1)
+    
     except Exception as e:
-        print(f"Warning: Could not clean up user data directory {user_data_dir}: {e}")
+        print(f"Error extracting scan_clause: {e}")
+    
+    return None
+
+
+def try_auto_scan(driver):
+    """Try to automatically trigger the scan"""
+    try:
+        print("🔍 Looking for scan triggers...")
+        
+        # Wait for page to settle
+        time.sleep(3)
+        
+        # Scroll down to load any lazy content
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(2)
+        driver.execute_script("window.scrollTo(0, 0);")
+        time.sleep(1)
+        
+        # Look for various button types
+        button_selectors = [
+            "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'scan')]",
+            "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'run')]",
+            "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'search')]",
+            "//input[@type='submit']",
+            "//button[@type='submit']",
+            "//button[contains(@class, 'btn')]",
+            "//a[contains(@href, 'scan') or contains(@onclick, 'scan')]"
+        ]
+        
+        for selector in button_selectors:
+            try:
+                elements = driver.find_elements(By.XPATH, selector)
+                for element in elements:
+                    if element.is_displayed() and element.is_enabled():
+                        print(f"🎯 Found potential scan trigger: '{element.text}' or tag: {element.tag_name}")
+                        try:
+                            # Scroll to element
+                            driver.execute_script("arguments[0].scrollIntoView(true);", element)
+                            time.sleep(1)
+                            
+                            # Try click
+                            element.click()
+                            print("✅ Successfully clicked scan trigger!")
+                            return True
+                            
+                        except Exception as click_error:
+                            try:
+                                # Try JavaScript click
+                                driver.execute_script("arguments[0].click();", element)
+                                print("✅ Successfully JavaScript clicked scan trigger!")
+                                return True
+                            except:
+                                continue
+            except:
+                continue
+        
+        print("⚠️  No clickable scan triggers found. Scan might be automatic.")
+        return False
+        
+    except Exception as e:
+        print(f"❌ Error in auto scan: {e}")
+        return False
 
 
 def open_chartink_browser_and_print_scan_clause(scanner_name):
-    """
-    Opens the Chartink screener URL in a browser, intercepts the /backtest/process request,
-    prints the scan_clause from the payload, and keeps the browser open for 10 seconds.
-    Enhanced with unique session handling and proper cleanup.
-    """
-    chrome_options, user_data_dir = None, None
-    driver = None
+    """Main function"""
+    url = f"https://chartink.com/screener/{scanner_name}"
+    print(f"🚀 Starting enhanced Chartink screener for: {url}")
+    
+    driver = setup_driver()
     
     try:
-        # Get Chrome options with unique user data directory
-        chrome_options, user_data_dir = get_chrome_options()
+        # Navigate to page
+        print("📱 Loading page...")
+        driver.get(url)
+        time.sleep(5)
         
-        print(f"Creating Chrome session for screener: {scanner_name}")
-        print(f"Using user data directory: {user_data_dir}")
+        # Clear any pre-existing requests
+        del driver.requests
         
-        # Try to create ChromeDriver service with multiple fallback methods
-        service = None
-        driver = None
+        # Try to trigger scan automatically
+        try_auto_scan(driver)
         
-        # Method 1: Try using existing chromedriver in standard locations
-        chromedriver_paths = ['/usr/local/bin/chromedriver', '/usr/bin/chromedriver']
-        for path in chromedriver_paths:
-            if os.path.exists(path):
-                print(f"Found ChromeDriver at: {path}")
-                try:
-                    service = Service(path)
-                    break
-                except Exception as e:
-                    print(f"Failed to create service with {path}: {e}")
-                    continue
-        
-        # Method 2: Use WebDriverManager as fallback (downloads driver automatically)
-        if service is None:
-            try:
-                print("ChromeDriver not found locally, using WebDriverManager...")
-                from webdriver_manager.chrome import ChromeDriverManager
-                driver_path = ChromeDriverManager().install()
-                print(f"ChromeDriver installed at: {driver_path}")
-                service = Service(driver_path)
-            except Exception as e:
-                print(f"WebDriverManager failed: {e}")
-        
-        # Method 3: Try creating driver with different approaches
-        driver_creation_methods = [
-            # Try with service
-            lambda: webdriver.Chrome(service=service, options=chrome_options) if service else None,
-            # Try without service (let Selenium auto-detect)
-            lambda: webdriver.Chrome(options=chrome_options),
-        ]
-        
-        for i, method in enumerate(driver_creation_methods):
-            if driver is not None:
-                break
-            try:
-                print(f"Trying driver creation method {i + 1}...")
-                result = method()
-                if result is not None:
-                    driver = result
-                    print(f"Successfully created driver with method {i + 1}")
-                    break
-            except Exception as e:
-                print(f"Driver creation method {i + 1} failed: {e}")
-                continue
-        
-        if driver is None:
-            raise Exception("All driver creation methods failed")
-        
-        print("Successfully created Chrome WebDriver")
-        
-        # Set timeouts
-        driver.set_page_load_timeout(30)
-        driver.implicitly_wait(10)
-        
-        screener_url = f"https://chartink.com/screener/{scanner_name}"
-        print(f"Navigating to: {screener_url}")
-        driver.get(screener_url)
-        
-        scan_clause = None
-        # Wait for network requests to be made
-        for attempt in range(5):
-            print(f"Checking network requests (attempt {attempt + 1}/5)...")
-            for request in driver.requests:
-                if request.method == 'POST' and 'backtest/process' in request.url:
-                    if request.body:
-                        body = request.body.decode('utf-8')
-                        params = urllib.parse.parse_qs(body)
-                        if 'scan_clause' in params:
-                            scan_clause = params['scan_clause'][0]
-                            print(f"Found scan_clause: {scan_clause}")
-                            return scan_clause
-            
-            if scan_clause:
-                return scan_clause
-            time.sleep(2)  # Increased wait time
+        # Wait and monitor for requests
+        scan_clause = wait_and_capture_requests(driver, wait_time=45)
         
         if not scan_clause:
-            print("scan_clause not found in network requests.")
-            return ""
-        
-        return scan_clause
-        
+            print("\n❌ No scan_clause found in network traffic.")
+            print("\nDebugging info:")
+            print(f"Total requests captured: {len(driver.requests)}")
+            
+            chartink_requests = [req for req in driver.requests if 'chartink.com' in req.url]
+            print(f"Chartink requests: {len(chartink_requests)}")
+            
+            for req in chartink_requests[:10]:  # Show first 10
+                print(f"  - {req.method} {req.url}")
+                if req.body:
+                    try:
+                        body_preview = req.body.decode('utf-8')[:100]
+                        print(f"    Body preview: {body_preview}...")
+                    except:
+                        pass
+        else:
+            print(f"\n🎉 Successfully captured scan_clause!")
+            driver.quit()
+            return scan_clause
     except Exception as e:
-        print(f"Error in browser automation for {scanner_name}: {e}")
+        driver.quit()
+        print(f"❌ Error: {e}")
         
-        # Try fallback method before giving up
-        try:
-            print("Attempting fallback method...")
-            from .fallback_screener import fallback_get_scan_clause
-            fallback_result = fallback_get_scan_clause(scanner_name)
-            if fallback_result:
-                return fallback_result
-        except Exception as fallback_error:
-            print(f"Fallback method also failed: {fallback_error}")
-        
-        raise Exception(f"Browser automation failed: {e}")
-        
-    finally:
-        # Cleanup
-        if driver:
-            try:
-                driver.quit()
-                print("Chrome driver session closed")
-            except Exception as e:
-                print(f"Error closing driver: {e}")
-        
-        # Clean up user data directory
-        if user_data_dir:
-            cleanup_user_data_dir(user_data_dir)
+    # finally:
+    #     print("\n🔄 Closing browser...")
+    #     driver.quit()
+    #     print("✅ Browser closed. Script completed.")
+
+
+# if __name__ == "__main__":
+#     main()
+
+
+
+
+# def open_chartink_browser_and_print_scan_clause(scanner_name):
+#     """
+#     Opens the Chartink screener URL in a browser, intercepts the /backtest/process request,
+#     prints the scan_clause from the payload, and keeps the browser open for 10 seconds.
+#     """
+#     screener_url = f"https://chartink.com/screener/{scanner_name}"
+#     chrome_options = Options()
+#     # Run in headless mode so the browser window does not open
+#     chrome_options.add_argument("--headless")
+#     driver = webdriver.Chrome(options=chrome_options)
+#     driver.get(screener_url)
+#     scan_clause = None
+#     # Wait for network requests to be made
+#     for _ in range(5):
+#         for request in driver.requests:
+#             if request.method == 'POST' and 'backtest/process' in request.url:
+#                 if request.body:
+#                     body = request.body.decode('utf-8')
+#                     params = urllib.parse.parse_qs(body)
+#                     if 'scan_clause' in params:
+#                         scan_clause = params['scan_clause'][0]
+#                         print("scan_clause:", scan_clause)
+#                         return scan_clause
+#         if scan_clause:
+#             return scan_clause
+#         time.sleep(1)
+#     if not scan_clause:
+#         print("scan_clause not found in network requests.")
+#         driver.quit()
+#         return scan_clause
+#     driver.quit()
 
 # Example usage:
 # open_chartink_browser_and_print_scan_clause("https://chartink.com/screener/bittu-daily-trading")

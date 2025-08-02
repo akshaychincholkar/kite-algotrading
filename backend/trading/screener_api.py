@@ -63,8 +63,10 @@ def screener(request):
         # If browser automation failed or unavailable, try fallback method
         if not scan_clause:
             try:
-                from .utils.fallback_screener import fallback_get_scan_clause
-                scan_clause = fallback_get_scan_clause(screener_name)
+                # from .utils.fallback_screener import open_chartink_browser_and_print_scan_clause
+                # scan_clause = open_chartink_browser_and_print_scan_clause(screener_name)
+                from .utils.chartink_scan_clause import open_chartink_browser_and_print_scan_clause
+                scan_clause = open_chartink_browser_and_print_scan_clause(screener_name)                
                 print(f"Fallback method result: {len(scan_clause) if scan_clause else 0} characters")
             except Exception as e:
                 print(f"Fallback method failed: {e}")
