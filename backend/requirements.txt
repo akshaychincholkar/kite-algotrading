@@ -76,6 +76,6 @@ websockets==10.4
 blinker==1.4
 webdriver-manager==4.0.1
 
-# PostgreSQL support
-psycopg2==2.9.9
+# PostgreSQL support (Python 3.13 compatible)
+psycopg[binary]==3.2.1
 psycopg2-binary==2.9.10

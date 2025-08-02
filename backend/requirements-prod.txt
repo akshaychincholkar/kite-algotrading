@@ -16,7 +16,8 @@ gunicorn==22.0.0
 uvicorn==0.34.2
 whitenoise==6.6.0
 
-# Database support (PostgreSQL for production)
+# Database support (PostgreSQL for production - Python 3.13 compatible)
+psycopg[binary]==3.2.1
 psycopg2-binary==2.9.10
 
 # HTTP requests and API
