@@ -14,8 +14,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-# Load environment variables
-load_dotenv()
+
+# Only load .env file in local development, not in production
+if os.getenv('ENVIRONMENT') != 'production':
+    load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -90,8 +93,23 @@ WSGI_APPLICATION = 'money_multiplier.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Check if running in local environment
-if os.getenv('ENVIRONMENT') == 'local':
+# Print environment debug info
+print(f"DEBUG: ENVIRONMENT = {os.getenv('ENVIRONMENT')}")
+print(f"DEBUG: DATABASE_URL exists = {bool(os.getenv('DATABASE_URL'))}")
+print(f"DEBUG: DB_HOST = {os.getenv('DB_HOST')}")
+
+# FORCE PRODUCTION DATABASE for Render.com deployment
+# Check if we're on Render.com or if ENVIRONMENT is production
+is_render = '.onrender.com' in os.getenv('RENDER_EXTERNAL_URL', '') or os.getenv('RENDER_SERVICE_NAME')
+is_production = os.getenv('ENVIRONMENT', '').lower() == 'production'
+environment = os.getenv('ENVIRONMENT', '').lower()
+
+print(f"DEBUG: is_render = {is_render}")
+print(f"DEBUG: is_production = {is_production}")
+print(f"DEBUG: RENDER_EXTERNAL_URL = {os.getenv('RENDER_EXTERNAL_URL')}")
+
+if environment == 'local' and not is_render and not is_production:
+    print("DEBUG: Using SQLite for local development")
     # Use SQLite for local development
     DATABASES = {
         'default': {
@@ -100,71 +118,43 @@ if os.getenv('ENVIRONMENT') == 'local':
         }
     }
 else:
-    # Use PostgreSQL for production
+    print("DEBUG: FORCING PostgreSQL for production/Render deployment")
+    # FORCE PostgreSQL for production - override any local settings
     DATABASE_URL = os.getenv('DATABASE_URL')
     
-    # If DATABASE_URL is not available, construct it from individual components
+    # Always construct DATABASE_URL for Render.com
+    db_host = os.getenv('DB_HOST', 'dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com')
+    db_port = os.getenv('DB_PORT', '5432')
+    db_name = os.getenv('DB_NAME', 'algotrading_60j3')
+    db_user = os.getenv('DB_USER', 'algotrading_user')
+    db_password = os.getenv('DB_PASSWORD', 'KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x')
+    
     if not DATABASE_URL:
-        db_host = os.getenv('DB_HOST', 'dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com')
-        db_port = os.getenv('DB_PORT', '5432')
-        db_name = os.getenv('DB_NAME', 'algotrading_60j3')
-        db_user = os.getenv('DB_USER', 'algotrading_user')
-        db_password = os.getenv('DB_PASSWORD', 'KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x')
         DATABASE_URL = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+        print("DEBUG: Constructed DATABASE_URL from individual components")
     
-    print(f"DEBUG: ENVIRONMENT = {os.getenv('ENVIRONMENT')}")
-    print(f"DEBUG: DATABASE_URL exists = {bool(DATABASE_URL)}")
+    print(f"DEBUG: Using hardcoded production credentials for reliability")
     
-    if DATABASE_URL:
-        # Mask password in debug output
-        masked_url = DATABASE_URL.replace(os.getenv('DB_PASSWORD', 'KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x'), '***')
-        print(f"DEBUG: DATABASE_URL = {masked_url}")
-        
-        try:
-            # Try using dj_database_url first
-            DATABASES = {
-                'default': dj_database_url.config(
-                    default=DATABASE_URL,
-                    conn_max_age=600,
-                    conn_health_checks=True,
-                )
-            }
-            print(f"DEBUG: Using dj_database_url with PostgreSQL")
-        except Exception as e:
-            print(f"DEBUG: dj_database_url failed: {e}")
-            # Manual PostgreSQL configuration as fallback
-            DATABASES = {
-                'default': {
-                    'ENGINE': 'django.db.backends.postgresql',
-                    'NAME': os.getenv('DB_NAME', 'algotrading_60j3'),
-                    'USER': os.getenv('DB_USER', 'algotrading_user'),
-                    'PASSWORD': os.getenv('DB_PASSWORD', 'KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x'),
-                    'HOST': os.getenv('DB_HOST', 'dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com'),
-                    'PORT': os.getenv('DB_PORT', '5432'),
-                    'OPTIONS': {
-                        'connect_timeout': 60,
-                        'sslmode': 'require',
-                    },
-                }
-            }
-            print(f"DEBUG: Using manual PostgreSQL configuration")
-    else:
-        # Use hardcoded production database credentials as fallback
-        print("DEBUG: No DATABASE_URL found, using hardcoded production database")
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.postgresql',
-                'NAME': os.getenv('DB_NAME', 'algotrading_60j3'),
-                'USER': os.getenv('DB_USER', 'algotrading_user'),
-                'PASSWORD': os.getenv('DB_PASSWORD', 'KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x'),
-                'HOST': os.getenv('DB_HOST', 'dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com'),
-                'PORT': os.getenv('DB_PORT', '5432'),
-                'OPTIONS': {
-                    'connect_timeout': 60,
-                    'sslmode': 'require',
-                },
-            }
+    # ALWAYS use hardcoded production database to avoid any configuration issues
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': db_name,
+            'USER': db_user,
+            'PASSWORD': db_password,
+            'HOST': db_host,
+            'PORT': db_port,
+            'OPTIONS': {
+                'connect_timeout': 60,
+                'sslmode': 'require',
+            },
         }
+    }
+    
+    print(f"DEBUG: Database HOST = {DATABASES['default']['HOST']}")
+    print(f"DEBUG: Database NAME = {DATABASES['default']['NAME']}")
+    print(f"DEBUG: Database USER = {DATABASES['default']['USER']}")
+    print(f"DEBUG: Database PORT = {DATABASES['default']['PORT']}")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
