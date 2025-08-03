@@ -8,7 +8,7 @@ services:
     name: algotrading-backend
     runtime: python-3.11
     buildCommand: "pip install --upgrade pip && pip install psycopg[binary]==3.2.9 && pip install -r backend/requirements-prod.txt && cd backend && python test_db_connection.py && python manage.py migrate --noinput"
-    startCommand: "cd backend && python -m gunicorn money_multiplier.wsgi:application --bind 0.0.0.0:$PORT"
+    startCommand: "ls -la scripts/ && chmod +x scripts/chrome-setup.sh && bash scripts/chrome-setup.sh && cd backend && python -m gunicorn money_multiplier.wsgi:application --bind 0.0.0.0:$PORT"
     envVars:
       - key: DATABASE_URL
         fromDatabase:

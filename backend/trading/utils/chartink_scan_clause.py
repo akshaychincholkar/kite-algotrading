@@ -28,15 +28,11 @@ def setup_driver():
     chrome_options.add_argument('--headless')  # Run in headless mode
     chrome_options.add_argument('--disable-gpu')  # Additional for production
     chrome_options.add_argument('--remote-debugging-port=9222')  # Additional for production
+    chrome_options.add_argument('--disable-web-security')
+    chrome_options.add_argument('--allow-running-insecure-content')
+    chrome_options.add_argument('--disable-features=VizDisplayCompositor')
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
-    
-    # Selenium-wire options
-    seleniumwire_options = {
-        'verify_ssl': False,
-        'suppress_connection_errors': False,
-        'disable_encoding': True
-    }
     
     # Production environment detection
     is_production = any([
@@ -46,29 +42,86 @@ def setup_driver():
         '/app' in os.getcwd(),  # Heroku/Render indicator
     ])
     
+    # Set Chrome binary path for production
     if is_production:
-        # Use system ChromeDriver in production (installed via buildpack)
-        try:
-            service = Service()  # Will use system chromedriver
-            logger.info("Using system ChromeDriver for production")
-        except Exception as e:
-            logger.warning(f"System ChromeDriver not found, falling back to WebDriverManager: {e}")
+        chrome_paths = [
+            '/usr/bin/google-chrome',
+            '/usr/bin/google-chrome-stable',
+            '/usr/bin/chromium-browser',
+            '/opt/google/chrome/chrome',
+            os.environ.get('GOOGLE_CHROME_BIN'),
+        ]
+        
+        chrome_binary = None
+        for path in chrome_paths:
+            if path and os.path.exists(path):
+                chrome_binary = path
+                logger.info(f"Found Chrome binary at: {path}")
+                break
+        
+        if chrome_binary:
+            chrome_options.binary_location = chrome_binary
+        else:
+            logger.error("Chrome binary not found in production environment")
+            # Log available paths for debugging
+            for path in chrome_paths:
+                if path:
+                    logger.info(f"Checked path: {path} - exists: {os.path.exists(path) if path else False}")
+    
+    # Selenium-wire options
+    seleniumwire_options = {
+        'verify_ssl': False,
+        'suppress_connection_errors': False,
+        'disable_encoding': True
+    }
+    
+    # Set up ChromeDriver service
+    try:
+        if is_production:
+            # Try to use system ChromeDriver first
+            chromedriver_paths = [
+                '/usr/local/bin/chromedriver',
+                '/usr/bin/chromedriver',
+                '/opt/chromedriver/chromedriver',
+                os.environ.get('CHROMEDRIVER_PATH'),
+            ]
+            
+            chromedriver_binary = None
+            for path in chromedriver_paths:
+                if path and os.path.exists(path):
+                    chromedriver_binary = path
+                    logger.info(f"Found ChromeDriver at: {path}")
+                    break
+            
+            if chromedriver_binary:
+                service = Service(chromedriver_binary)
+                logger.info("Using system ChromeDriver for production")
+            else:
+                logger.warning("System ChromeDriver not found, falling back to WebDriverManager")
+                service = Service(ChromeDriverManager().install())
+        else:
+            # Use WebDriverManager in development
             service = Service(ChromeDriverManager().install())
-    else:
-        # Use WebDriverManager in development
-        service = Service(ChromeDriverManager().install())
-        logger.info("Using WebDriverManager for development")
-    
-    driver = webdriver.Chrome(
-        service=service,
-        options=chrome_options,
-        seleniumwire_options=seleniumwire_options
-    )
-    
-    # Hide automation traces
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-    
-    return driver
+            logger.info("Using WebDriverManager for development")
+        
+        driver = webdriver.Chrome(
+            service=service,
+            options=chrome_options,
+            seleniumwire_options=seleniumwire_options
+        )
+        
+        # Hide automation traces
+        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        
+        return driver
+        
+    except Exception as e:
+        logger.error(f"Failed to create Chrome WebDriver: {e}")
+        # In production, don't fallback to avoid worker timeout
+        if is_production:
+            raise Exception(f"Chrome WebDriver setup failed in production: {e}")
+        else:
+            raise e
 
 
 def wait_and_capture_requests(driver, wait_time=30):
@@ -227,17 +280,41 @@ def try_auto_scan(driver):
 
 
 def open_chartink_browser_and_print_scan_clause(scanner_name):
-    """Main function"""
+    """Main function with timeout protection"""
+    import signal
+    import logging
+    import os
+    logger = logging.getLogger('chartink')
+    
     url = f"https://chartink.com/screener/{scanner_name}"
     logger.info(f"🚀 Starting enhanced Chartink screener for: {url}")
     
-    driver = setup_driver()
+    # Set up timeout handler
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Browser automation timed out")
     
+    # Production environment detection
+    is_production = any([
+        os.environ.get('RENDER'),
+        os.environ.get('RAILWAY_PROJECT_ID'), 
+        os.environ.get('HEROKU_APP_NAME'),
+    ])
+    
+    # Set shorter timeout for production to avoid worker timeouts
+    timeout_seconds = 20 if is_production else 45
+    
+    driver = None
     try:
+        # Set timeout alarm
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(timeout_seconds)
+        
+        driver = setup_driver()
+        
         # Navigate to page
         logger.info("📱 Loading page...")
         driver.get(url)
-        time.sleep(5)
+        time.sleep(3)  # Reduced wait time for production
         
         # Clear any pre-existing requests
         del driver.requests
@@ -245,32 +322,42 @@ def open_chartink_browser_and_print_scan_clause(scanner_name):
         # Try to trigger scan automatically
         try_auto_scan(driver)
         
-        # Wait and monitor for requests
-        scan_clause = wait_and_capture_requests(driver, wait_time=45)
+        # Wait and monitor for requests (shorter time for production)
+        scan_clause = wait_and_capture_requests(driver, wait_time=15 if is_production else 30)
+        
+        # Disable alarm
+        signal.alarm(0)
         
         if not scan_clause:
             logger.warning("\n❌ No scan_clause found in network traffic.")
             logger.info("\nDebugging info:")
-            logger.info(f"Total requests captured: {len(driver.requests)}")
+            logger.info(f"Total requests captured: {len(driver.requests) if driver.requests else 0}")
             
-            chartink_requests = [req for req in driver.requests if 'chartink.com' in req.url]
-            logger.info(f"Chartink requests: {len(chartink_requests)}")
-            
-            for req in chartink_requests[:10]:  # Show first 10
-                logger.debug(f"  - {req.method} {req.url}")
-                if req.body:
-                    try:
-                        body_preview = req.body.decode('utf-8')[:100]
-                        logger.debug(f"    Body preview: {body_preview}...")
-                    except:
-                        pass
+            if driver.requests:
+                chartink_requests = [req for req in driver.requests if 'chartink.com' in req.url]
+                logger.info(f"Chartink requests: {len(chartink_requests)}")
+                
+                for req in chartink_requests[:5]:  # Show first 5 only
+                    logger.debug(f"  - {req.method} {req.url}")
         else:
             logger.info(f"\n🎉 Successfully captured scan_clause!")
-            driver.quit()
             return scan_clause
+            
+    except TimeoutError:
+        logger.error(f"❌ Browser automation timed out after {timeout_seconds} seconds")
+        signal.alarm(0)  # Disable alarm
     except Exception as e:
-        driver.quit()
         logger.error(f"❌ Error: {e}")
+        signal.alarm(0)  # Disable alarm
+    finally:
+        if driver:
+            try:
+                driver.quit()
+                logger.info("🔄 Browser closed")
+            except:
+                pass
+    
+    return None
         
     # finally:
     #     print("\n🔄 Closing browser...")

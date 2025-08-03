@@ -116,30 +116,46 @@ config_logger.info(f"RENDER_EXTERNAL_URL = {os.getenv('RENDER_EXTERNAL_URL')}")
 if environment == 'local' and not is_render and not is_production:
     config_logger.info("Using SQLite for local development")
     # Use SQLite for local development
+    # DATABASES = {
+    #     'default': {
+    #         'ENGINE': 'django.db.backends.sqlite3',
+    #         'NAME': BASE_DIR.parent / 'db.sqlite3',
+    #     }
+    # }
+    
+    # Alternative: If you want to use PostgreSQL locally, uncomment this and comment SQLite above
+    config_logger.info("Using local PostgreSQL for development")
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR.parent / 'db.sqlite3',
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'postgres'),
+            'USER': os.getenv('DB_USER', 'postgres'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'admin@123'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+            'OPTIONS': {
+                'connect_timeout': 60,
+                # Remove SSL requirement for local development
+            },
         }
     }
 else:
     config_logger.info("FORCING PostgreSQL for production/Render deployment")
-    # FORCE PostgreSQL for production - override any local settings
-    DATABASE_URL = os.getenv('DATABASE_URL')
-    
     # Always construct DATABASE_URL for Render.com
     db_host = os.getenv('DB_HOST', 'dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com')
     db_port = os.getenv('DB_PORT', '5432')
     db_name = os.getenv('DB_NAME', 'algotrading_60j3')
     db_user = os.getenv('DB_USER', 'algotrading_user')
     db_password = os.getenv('DB_PASSWORD', 'KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x')
-    
+
+    # FORCE PostgreSQL for production - override any local settings
+    DATABASE_URL = os.getenv('DATABASE_URL')
     if not DATABASE_URL:
         DATABASE_URL = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
         config_logger.info("Constructed DATABASE_URL from individual components")
-    
+
     config_logger.info("Using hardcoded production credentials for reliability")
-    
+
     # ALWAYS use hardcoded production database to avoid any configuration issues
     DATABASES = {
         'default': {
@@ -155,7 +171,7 @@ else:
             },
         }
     }
-    
+        
     config_logger.info(f"Database HOST = {DATABASES['default']['HOST']}")
     config_logger.info(f"Database NAME = {DATABASES['default']['NAME']}")
     config_logger.info(f"Database USER = {DATABASES['default']['USER']}")
