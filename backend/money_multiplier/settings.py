@@ -14,10 +14,18 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-# Load environment variables
-load_dotenv()
+import logging
+
+# Only load .env file in local development, not in production
+if os.getenv('ENVIRONMENT') != 'production':
+    load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Setup basic logging for configuration
+logging.basicConfig(level=logging.INFO)
+config_logger = logging.getLogger('database')
 
 
 # Quick-start development settings - unsuitable for production
@@ -90,8 +98,23 @@ WSGI_APPLICATION = 'money_multiplier.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Check if running in local environment
-if os.getenv('ENVIRONMENT') == 'local':
+# Print environment debug info
+config_logger.info(f"ENVIRONMENT = {os.getenv('ENVIRONMENT')}")
+config_logger.info(f"DATABASE_URL exists = {bool(os.getenv('DATABASE_URL'))}")
+config_logger.info(f"DB_HOST = {os.getenv('DB_HOST')}")
+
+# FORCE PRODUCTION DATABASE for Render.com deployment
+# Check if we're on Render.com or if ENVIRONMENT is production
+is_render = '.onrender.com' in os.getenv('RENDER_EXTERNAL_URL', '') or os.getenv('RENDER_SERVICE_NAME')
+is_production = os.getenv('ENVIRONMENT', '').lower() == 'production'
+environment = os.getenv('ENVIRONMENT', '').lower()
+
+config_logger.info(f"is_render = {is_render}")
+config_logger.info(f"is_production = {is_production}")
+config_logger.info(f"RENDER_EXTERNAL_URL = {os.getenv('RENDER_EXTERNAL_URL')}")
+
+if environment == 'local' and not is_render and not is_production:
+    config_logger.info("Using SQLite for local development")
     # Use SQLite for local development
     DATABASES = {
         'default': {
@@ -100,13 +123,43 @@ if os.getenv('ENVIRONMENT') == 'local':
         }
     }
 else:
-    # Use PostgreSQL or other database for production
+    config_logger.info("FORCING PostgreSQL for production/Render deployment")
+    # FORCE PostgreSQL for production - override any local settings
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    
+    # Always construct DATABASE_URL for Render.com
+    db_host = os.getenv('DB_HOST', 'dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com')
+    db_port = os.getenv('DB_PORT', '5432')
+    db_name = os.getenv('DB_NAME', 'algotrading_60j3')
+    db_user = os.getenv('DB_USER', 'algotrading_user')
+    db_password = os.getenv('DB_PASSWORD', 'KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x')
+    
+    if not DATABASE_URL:
+        DATABASE_URL = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+        config_logger.info("Constructed DATABASE_URL from individual components")
+    
+    config_logger.info("Using hardcoded production credentials for reliability")
+    
+    # ALWAYS use hardcoded production database to avoid any configuration issues
     DATABASES = {
-        'default': dj_database_url.config(
-            default='sqlite:///db.sqlite3',
-            conn_max_age=600
-        )
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': db_name,
+            'USER': db_user,
+            'PASSWORD': db_password,
+            'HOST': db_host,
+            'PORT': db_port,
+            'OPTIONS': {
+                'connect_timeout': 60,
+                'sslmode': 'require',
+            },
+        }
     }
+    
+    config_logger.info(f"Database HOST = {DATABASES['default']['HOST']}")
+    config_logger.info(f"Database NAME = {DATABASES['default']['NAME']}")
+    config_logger.info(f"Database USER = {DATABASES['default']['USER']}")
+    config_logger.info(f"Database PORT = {DATABASES['default']['PORT']}")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -137,6 +190,99 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+        'detailed': {
+            'format': '[{asctime}] {levelname} {name} {module}.{funcName}:{lineno} - {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'detailed',
+            'level': 'INFO',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'django.log',
+            'formatter': 'verbose',
+            'level': 'DEBUG',
+        },
+        'trading_file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'trading.log',
+            'formatter': 'detailed',
+            'level': 'DEBUG',
+        },
+        'screener_file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'screener.log',
+            'formatter': 'detailed',
+            'level': 'DEBUG',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'trading': {
+            'handlers': ['console', 'trading_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'screener': {
+            'handlers': ['console', 'screener_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'chartink': {
+            'handlers': ['console', 'screener_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'fallback_screener': {
+            'handlers': ['console', 'screener_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'database': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'chrome_env': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
+
+# Ensure logs directory exists
+import os
+logs_dir = BASE_DIR / 'logs'
+if not os.path.exists(logs_dir):
+    os.makedirs(logs_dir)
 
 
 # Static files (CSS, JavaScript, Images)
