@@ -1,6 +1,4 @@
-
-
-
+import logging
 from seleniumwire import webdriver
 from selenium.webdriver.chrome.options import Options
 import time
@@ -11,6 +9,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from urllib.parse import parse_qs, unquote
+
+# Get logger for chartink module
+logger = logging.getLogger('chartink')
 
 
 def setup_driver():
@@ -46,8 +47,8 @@ def setup_driver():
 
 def wait_and_capture_requests(driver, wait_time=30):
     """Wait for requests and capture scan_clause"""
-    print(f"Waiting {wait_time} seconds for network activity...")
-    print("Running in headless mode - monitoring automatically...")
+    logger.info(f"Waiting {wait_time} seconds for network activity...")
+    logger.info("Running in headless mode - monitoring automatically...")
     
     start_time = time.time()
     scan_clause_found = None
@@ -61,24 +62,24 @@ def wait_and_capture_requests(driver, wait_time=30):
                     
                     # Look for scan_clause in any form
                     if 'scan_clause' in body_str:
-                        print(f"\n🎯 Found scan_clause in request to: {request.url}")
-                        # print(f"Method: {request.method}")
-                        # print(f"Headers: {dict(request.headers)}")
+                        logger.info(f"\n🎯 Found scan_clause in request to: {request.url}")
+                        # logger.debug(f"Method: {request.method}")
+                        # logger.debug(f"Headers: {dict(request.headers)}")
                         
                         # Extract scan_clause
                         scan_clause = extract_scan_clause_from_body(body_str, request.headers)
                         
                         if scan_clause:
-                            print(f"\n{'='*60}")
-                            print("✅ SCAN CLAUSE PAYLOAD CAPTURED:")
-                            print(f"{'='*60}")
-                            print(scan_clause)
-                            print(f"{'='*60}")
+                            logger.info(f"\n{'='*60}")
+                            logger.info("✅ SCAN CLAUSE PAYLOAD CAPTURED:")
+                            logger.info(f"{'='*60}")
+                            logger.info(scan_clause)
+                            logger.info(f"{'='*60}")
                             
                             # Save to file
                             # with open('c:\\workspace\\python\\kite\\screener_sample\\captured_scan_clause.txt', 'w', encoding='utf-8') as f:
                             #     f.write(scan_clause)
-                            # print("✅ Saved to captured_scan_clause.txt")
+                            # logger.info("✅ Saved to captured_scan_clause.txt")
                             
                             return scan_clause
                             
@@ -88,7 +89,7 @@ def wait_and_capture_requests(driver, wait_time=30):
         time.sleep(2)
         remaining = wait_time - (time.time() - start_time)
         if remaining > 0:
-            print(f"⏱️  Still monitoring... {remaining:.0f}s remaining")
+            logger.debug(f"⏱️  Still monitoring... {remaining:.0f}s remaining")
     
     return scan_clause_found
 
@@ -134,7 +135,7 @@ def extract_scan_clause_from_body(body_str, headers):
                     return match.group(1)
     
     except Exception as e:
-        print(f"Error extracting scan_clause: {e}")
+        logger.error(f"Error extracting scan_clause: {e}")
     
     return None
 
@@ -142,7 +143,7 @@ def extract_scan_clause_from_body(body_str, headers):
 def try_auto_scan(driver):
     """Try to automatically trigger the scan"""
     try:
-        print("🔍 Looking for scan triggers...")
+        logger.info("🔍 Looking for scan triggers...")
         
         # Wait for page to settle
         time.sleep(3)
@@ -169,7 +170,7 @@ def try_auto_scan(driver):
                 elements = driver.find_elements(By.XPATH, selector)
                 for element in elements:
                     if element.is_displayed() and element.is_enabled():
-                        print(f"🎯 Found potential scan trigger: '{element.text}' or tag: {element.tag_name}")
+                        logger.info(f"🎯 Found potential scan trigger: '{element.text}' or tag: {element.tag_name}")
                         try:
                             # Scroll to element
                             driver.execute_script("arguments[0].scrollIntoView(true);", element)
@@ -177,38 +178,38 @@ def try_auto_scan(driver):
                             
                             # Try click
                             element.click()
-                            print("✅ Successfully clicked scan trigger!")
+                            logger.info("✅ Successfully clicked scan trigger!")
                             return True
                             
                         except Exception as click_error:
                             try:
                                 # Try JavaScript click
                                 driver.execute_script("arguments[0].click();", element)
-                                print("✅ Successfully JavaScript clicked scan trigger!")
+                                logger.info("✅ Successfully JavaScript clicked scan trigger!")
                                 return True
                             except:
                                 continue
             except:
                 continue
         
-        print("⚠️  No clickable scan triggers found. Scan might be automatic.")
+        logger.warning("⚠️  No clickable scan triggers found. Scan might be automatic.")
         return False
         
     except Exception as e:
-        print(f"❌ Error in auto scan: {e}")
+        logger.error(f"❌ Error in auto scan: {e}")
         return False
 
 
 def open_chartink_browser_and_print_scan_clause(scanner_name):
     """Main function"""
     url = f"https://chartink.com/screener/{scanner_name}"
-    print(f"🚀 Starting enhanced Chartink screener for: {url}")
+    logger.info(f"🚀 Starting enhanced Chartink screener for: {url}")
     
     driver = setup_driver()
     
     try:
         # Navigate to page
-        print("📱 Loading page...")
+        logger.info("📱 Loading page...")
         driver.get(url)
         time.sleep(5)
         
@@ -222,28 +223,28 @@ def open_chartink_browser_and_print_scan_clause(scanner_name):
         scan_clause = wait_and_capture_requests(driver, wait_time=45)
         
         if not scan_clause:
-            print("\n❌ No scan_clause found in network traffic.")
-            print("\nDebugging info:")
-            print(f"Total requests captured: {len(driver.requests)}")
+            logger.warning("\n❌ No scan_clause found in network traffic.")
+            logger.info("\nDebugging info:")
+            logger.info(f"Total requests captured: {len(driver.requests)}")
             
             chartink_requests = [req for req in driver.requests if 'chartink.com' in req.url]
-            print(f"Chartink requests: {len(chartink_requests)}")
+            logger.info(f"Chartink requests: {len(chartink_requests)}")
             
             for req in chartink_requests[:10]:  # Show first 10
-                print(f"  - {req.method} {req.url}")
+                logger.debug(f"  - {req.method} {req.url}")
                 if req.body:
                     try:
                         body_preview = req.body.decode('utf-8')[:100]
-                        print(f"    Body preview: {body_preview}...")
+                        logger.debug(f"    Body preview: {body_preview}...")
                     except:
                         pass
         else:
-            print(f"\n🎉 Successfully captured scan_clause!")
+            logger.info(f"\n🎉 Successfully captured scan_clause!")
             driver.quit()
             return scan_clause
     except Exception as e:
         driver.quit()
-        print(f"❌ Error: {e}")
+        logger.error(f"❌ Error: {e}")
         
     # finally:
     #     print("\n🔄 Closing browser...")

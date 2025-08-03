@@ -11,12 +11,8 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}/backend",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "backend.settings",
-                "DB_NAME": "postgres",
-                "DB_USER": "postgres",
-                "DB_PASSWORD": "admin@123",
-                "DB_HOST": "localhost",
-                "DB_PORT": "5432",
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
+                "ENVIRONMENT": "local",
                 "DEBUG": "True"
             },
             "console": "integratedTerminal"
@@ -31,8 +27,13 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}/backend",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "backend.settings",
-                "DATABASE_URL": "${input:databaseUrl}",
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
+                "ENVIRONMENT": "production",
+                "DB_HOST": "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com",
+                "DB_PORT": "5432",
+                "DB_NAME": "algotrading_60j3",
+                "DB_USER": "algotrading_user",
+                "DB_PASSWORD": "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x",
                 "DEBUG": "False"
             },
             "console": "integratedTerminal"
@@ -67,8 +68,13 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}/backend",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "backend.settings",
-                "DATABASE_URL": "${input:databaseUrl}",
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
+                "ENVIRONMENT": "production",
+                "DB_HOST": "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com",
+                "DB_PORT": "5432",
+                "DB_NAME": "algotrading_60j3",
+                "DB_USER": "algotrading_user",
+                "DB_PASSWORD": "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x",
                 "DEBUG": "False"
             },
             "console": "integratedTerminal"
@@ -103,8 +109,13 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}/backend",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "backend.settings",
-                "DATABASE_URL": "${input:databaseUrl}",
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
+                "ENVIRONMENT": "production",
+                "DB_HOST": "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com",
+                "DB_PORT": "5432",
+                "DB_NAME": "algotrading_60j3",
+                "DB_USER": "algotrading_user",
+                "DB_PASSWORD": "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x",
                 "DEBUG": "False"
             },
             "console": "integratedTerminal"
@@ -139,28 +150,67 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}/backend",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "backend.settings",
-                "DATABASE_URL": "${input:databaseUrl}",
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
+                "ENVIRONMENT": "production",
+                "DB_HOST": "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com",
+                "DB_PORT": "5432",
+                "DB_NAME": "algotrading_60j3",
+                "DB_USER": "algotrading_user",
+                "DB_PASSWORD": "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x",
                 "DEBUG": "False"
             },
             "console": "integratedTerminal"
         },
         {
-            "name": "Test Database Connection",
+            "name": "Test Database Connection (Local)",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/test_db_connection.py",
+            "program": "${workspaceFolder}/backend/test_db_connection.py",
             "args": [],
             "justMyCode": true,
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/backend",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "backend.settings",
-                "DB_NAME": "postgres",
-                "DB_USER": "postgres",
-                "DB_PASSWORD": "admin@123",
-                "DB_HOST": "localhost",
-                "DB_PORT": "5432",
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
+                "ENVIRONMENT": "local",
                 "DEBUG": "True"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Test Database Connection (Production)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/test_db_connection.py",
+            "args": [],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
+                "ENVIRONMENT": "production",
+                "DB_HOST": "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com",
+                "DB_PORT": "5432",
+                "DB_NAME": "algotrading_60j3",
+                "DB_USER": "algotrading_user",
+                "DB_PASSWORD": "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x",
+                "DEBUG": "False"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Test Direct Database Connection (Production)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/test_direct_db.py",
+            "args": [],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "ENVIRONMENT": "production",
+                "DB_HOST": "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com",
+                "DB_PORT": "5432",
+                "DB_NAME": "algotrading_60j3",
+                "DB_USER": "algotrading_user",
+                "DB_PASSWORD": "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x"
             },
             "console": "integratedTerminal"
         },
