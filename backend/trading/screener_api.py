@@ -54,7 +54,8 @@ def screener(request):
         # Try to generate scan_clause with fallbacks
         scan_clause = ""
         
-        if chrome_available and chromedriver_available and not is_production:
+        # Skip browser automation in production for now to avoid worker timeouts
+        if not is_production and chrome_available and chromedriver_available:
             # Only try browser automation in development with proper setup
             try:
                 from .utils.chartink_scan_clause import open_chartink_browser_and_print_scan_clause
@@ -63,18 +64,14 @@ def screener(request):
             except Exception as e:
                 logger.error(f"Browser automation failed: {e}")
                 scan_clause = ""
+        elif is_production:
+            logger.warning("Skipping browser automation in production to avoid worker timeouts")
+            scan_clause = f"# Screener: {screener_name}\n# Browser automation disabled in production\n# Please configure scan clause manually"
         
-        # If browser automation failed or unavailable, try fallback method
-        if not scan_clause:
-            try:
-                # from .utils.fallback_screener import open_chartink_browser_and_print_scan_clause
-                # scan_clause = open_chartink_browser_and_print_scan_clause(screener_name)
-                from .utils.chartink_scan_clause import open_chartink_browser_and_print_scan_clause
-                scan_clause = open_chartink_browser_and_print_scan_clause(screener_name)                
-                logger.info(f"Fallback method result: {len(scan_clause) if scan_clause else 0} characters")
-            except Exception as e:
-                logger.error(f"Fallback method failed: {e}")
-                scan_clause = f"# Screener: {screener_name}\n# Please configure scan clause manually"
+        # If browser automation failed, unavailable, or in production, use manual configuration
+        if not scan_clause or scan_clause.startswith('#'):
+            logger.info("Using manual scan clause configuration")
+            scan_clause = f"# Screener: {screener_name}\n# Please configure scan clause manually\n# Visit: https://chartink.com/screener/{screener_name}"
         serializer = ScreenerSerializer(data={
             'screener_name': str(screener_name),
             'user_id': str(user_id),
