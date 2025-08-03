@@ -10,6 +10,10 @@ from django.contrib.auth import get_user_model
 from .utils.chartink_scan_clause import open_chartink_browser_and_print_scan_clause
 from .utils.chartink_screener import fetch_chartink_screener
 from .models.user import User
+import logging
+
+# Get logger for trading module
+logger = logging.getLogger('trading')
 # Function-based view for Screener creation
 @api_view(['GET', 'POST'])
 def screener(request):
@@ -45,7 +49,7 @@ def screener(request):
             os.path.exists('/usr/bin/chromedriver')
         ])
         
-        print(f"Environment check - Production: {is_production}, Chrome: {chrome_available}, ChromeDriver: {chromedriver_available}")
+        logger.info(f"Environment check - Production: {is_production}, Chrome: {chrome_available}, ChromeDriver: {chromedriver_available}")
         
         # Try to generate scan_clause with fallbacks
         scan_clause = ""
@@ -55,19 +59,21 @@ def screener(request):
             try:
                 from .utils.chartink_scan_clause import open_chartink_browser_and_print_scan_clause
                 scan_clause = open_chartink_browser_and_print_scan_clause(screener_name)
-                print(f"Browser automation successful: {len(scan_clause) if scan_clause else 0} characters")
+                logger.info(f"Browser automation successful: {len(scan_clause) if scan_clause else 0} characters")
             except Exception as e:
-                print(f"Browser automation failed: {e}")
+                logger.error(f"Browser automation failed: {e}")
                 scan_clause = ""
         
         # If browser automation failed or unavailable, try fallback method
         if not scan_clause:
             try:
-                from .utils.fallback_screener import fallback_get_scan_clause
-                scan_clause = fallback_get_scan_clause(screener_name)
-                print(f"Fallback method result: {len(scan_clause) if scan_clause else 0} characters")
+                # from .utils.fallback_screener import open_chartink_browser_and_print_scan_clause
+                # scan_clause = open_chartink_browser_and_print_scan_clause(screener_name)
+                from .utils.chartink_scan_clause import open_chartink_browser_and_print_scan_clause
+                scan_clause = open_chartink_browser_and_print_scan_clause(screener_name)                
+                logger.info(f"Fallback method result: {len(scan_clause) if scan_clause else 0} characters")
             except Exception as e:
-                print(f"Fallback method failed: {e}")
+                logger.error(f"Fallback method failed: {e}")
                 scan_clause = f"# Screener: {screener_name}\n# Please configure scan clause manually"
         serializer = ScreenerSerializer(data={
             'screener_name': str(screener_name),
@@ -183,16 +189,16 @@ class ScreenerUtils:
     def print_user_name_by_id(user_id):
         try:
             user = User.objects.get(user_id=user_id)
-            print(f"User name for user_id {user_id}: {user.user_name}")
+            logger.info(f"User name for user_id {user_id}: {user.user_name}")
             return user
         except User.DoesNotExist:
-            print(f"User with user_id {user_id} does not exist.")
+            logger.warning(f"User with user_id {user_id} does not exist.")
             return None
 
     @staticmethod
     def create_dummy_screener_for_user(user):
         if not user or not getattr(user, 'pk', None):
-            print("No valid user provided. Cannot create screener.")
+            logger.warning("No valid user provided. Cannot create screener.")
             return None
         try:
             screener = Screener.objects.create(
@@ -200,8 +206,8 @@ class ScreenerUtils:
                 scan_clause="dummy_scan_clause",
                 created_by=user
             )
-            print(f"Created Screener: {screener.screener_name} for user {user.user_name}")
+            logger.info(f"Created Screener: {screener.screener_name} for user {user.user_name}")
             return screener
         except Exception as e:
-            print(f"Failed to create screener: {e}")
+            logger.error(f"Failed to create screener: {e}")
             return None

@@ -1,248 +1,245 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Simple Django Server",
+            "name": "Django: Run Server (Local DB)",
             "type": "debugpy",
             "request": "launch",
-            "args": [
-                "runserver"
-            ],
+            "program": "${workspaceFolder}/backend/manage.py",
+            "args": ["runserver"],
             "django": true,
-            "autoStartBrowser": false,
-            "program": "${workspaceFolder}\\backend\\manage.py",
-            "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
-            "envFile": "${workspaceFolder}/.env.development",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
             "env": {
                 "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
-                "PYTHONPATH": "${workspaceFolder}\\backend",
-                "ENVIRONMENT": "local"
+                "ENVIRONMENT": "local",
+                "DEBUG": "True"
             },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
+            "console": "integratedTerminal"
         },
         {
-            "name": "Django Backend Server",
+            "name": "Django: Run Server (Production DB)",
             "type": "debugpy",
             "request": "launch",
-            "args": [
-                "runserver",
-                "0.0.0.0:8000"
-            ],
+            "program": "${workspaceFolder}/backend/manage.py",
+            "args": ["runserver"],
             "django": true,
-            "autoStartBrowser": false,
-            "program": "${workspaceFolder}\\backend\\manage.py",
-            "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
-            "envFile": "${workspaceFolder}/.env.development",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
             "env": {
                 "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
-                "DEBUG": "True",
-                "ALLOWED_HOSTS": "localhost,127.0.0.1,0.0.0.0",
-                "CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
+                "ENVIRONMENT": "production",
+                "DB_HOST": "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com",
+                "DB_PORT": "5432",
+                "DB_NAME": "algotrading_60j3",
+                "DB_USER": "algotrading_user",
+                "DB_PASSWORD": "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x",
+                "DEBUG": "False"
             },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
+            "console": "integratedTerminal"
         },
         {
-            "name": "Django Backend Server (Production Mode)",
+            "name": "Django: Make Migrations (Local DB)",
             "type": "debugpy",
             "request": "launch",
-            "args": [
-                "runserver",
-                "0.0.0.0:8000"
-            ],
+            "program": "${workspaceFolder}/backend/manage.py",
+            "args": ["makemigrations"],
             "django": true,
-            "autoStartBrowser": false,
-            "program": "${workspaceFolder}\\backend\\manage.py",
-            "envFile": "${workspaceFolder}/.env.prod.example",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "backend.settings",
+                "DB_NAME": "postgres",
+                "DB_USER": "postgres",
+                "DB_PASSWORD": "admin@123",
+                "DB_HOST": "localhost",
+                "DB_PORT": "5432",
+                "DEBUG": "True"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Django: Make Migrations (Production DB)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/manage.py",
+            "args": ["makemigrations"],
+            "django": true,
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
             "env": {
                 "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
-                "DEBUG": "False",
-                "ALLOWED_HOSTS": ".onrender.com,algotrading-backend.onrender.com,localhost,127.0.0.1",
-                "CORS_ALLOWED_ORIGINS": "https://algotrading-frontend.onrender.com,http://localhost:3000,http://localhost:5173",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
+                "ENVIRONMENT": "production",
+                "DB_HOST": "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com",
+                "DB_PORT": "5432",
+                "DB_NAME": "algotrading_60j3",
+                "DB_USER": "algotrading_user",
+                "DB_PASSWORD": "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x",
+                "DEBUG": "False"
             },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
+            "console": "integratedTerminal"
         },
         {
-            "name": "Django Migrate",
+            "name": "Django: Migrate (Local DB)",
             "type": "debugpy",
             "request": "launch",
-            "args": [
-                "migrate"
-            ],
+            "program": "${workspaceFolder}/backend/manage.py",
+            "args": ["migrate"],
             "django": true,
-            "program": "${workspaceFolder}\\backend\\manage.py",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "backend.settings",
+                "DB_NAME": "postgres",
+                "DB_USER": "postgres",
+                "DB_PASSWORD": "admin@123",
+                "DB_HOST": "localhost",
+                "DB_PORT": "5432",
+                "DEBUG": "True"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Django: Migrate (Production DB)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/manage.py",
+            "args": ["migrate"],
+            "django": true,
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
             "env": {
                 "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
+                "ENVIRONMENT": "production",
+                "DB_HOST": "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com",
+                "DB_PORT": "5432",
+                "DB_NAME": "algotrading_60j3",
+                "DB_USER": "algotrading_user",
+                "DB_PASSWORD": "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x",
+                "DEBUG": "False"
             },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
+            "console": "integratedTerminal"
         },
         {
-            "name": "Django Collectstatic",
+            "name": "Django: Create Superuser (Local DB)",
             "type": "debugpy",
             "request": "launch",
-            "args": [
-                "collectstatic",
-                "--noinput"
-            ],
+            "program": "${workspaceFolder}/backend/manage.py",
+            "args": ["createsuperuser"],
             "django": true,
-            "program": "${workspaceFolder}\\backend\\manage.py",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "backend.settings",
+                "DB_NAME": "postgres",
+                "DB_USER": "postgres",
+                "DB_PASSWORD": "admin@123",
+                "DB_HOST": "localhost",
+                "DB_PORT": "5432",
+                "DEBUG": "True"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Django: Create Superuser (Production DB)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/manage.py",
+            "args": ["createsuperuser"],
+            "django": true,
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
             "env": {
                 "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
+                "ENVIRONMENT": "production",
+                "DB_HOST": "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com",
+                "DB_PORT": "5432",
+                "DB_NAME": "algotrading_60j3",
+                "DB_USER": "algotrading_user",
+                "DB_PASSWORD": "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x",
+                "DEBUG": "False"
             },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
+            "console": "integratedTerminal"
         },
         {
-            "name": "Django Shell",
+            "name": "Test Database Connection (Local)",
             "type": "debugpy",
             "request": "launch",
-            "args": [
-                "shell"
-            ],
-            "django": true,
-            "program": "${workspaceFolder}\\backend\\manage.py",
+            "program": "${workspaceFolder}/backend/test_db_connection.py",
+            "args": [],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
             "env": {
                 "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
+                "ENVIRONMENT": "local",
+                "DEBUG": "True"
             },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
+            "console": "integratedTerminal"
         },
         {
-            "name": "AlgoTrader Django Server",
+            "name": "Test Database Connection (Production)",
             "type": "debugpy",
             "request": "launch",
-            "args": [
-                "runserver",
-                "0.0.0.0:8001"
-            ],
-            "django": true,
-            "autoStartBrowser": false,
-            "program": "${workspaceFolder}\\backend\\manage.py",
-            "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
-            "envFile": "${workspaceFolder}/.env.development",
+            "program": "${workspaceFolder}/backend/test_db_connection.py",
+            "args": [],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
-                "DEBUG": "True",
-                "ALLOWED_HOSTS": "localhost,127.0.0.1,0.0.0.0",
-                "CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
+                "DJANGO_SETTINGS_MODULE": "money_multiplier.settings",
+                "ENVIRONMENT": "production",
+                "DB_HOST": "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com",
+                "DB_PORT": "5432",
+                "DB_NAME": "algotrading_60j3",
+                "DB_USER": "algotrading_user",
+                "DB_PASSWORD": "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x",
+                "DEBUG": "False"
             },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
+            "console": "integratedTerminal"
         },
         {
-            "name": "AlgoTrader Django Server (Production Mode)",
+            "name": "Test Direct Database Connection (Production)",
             "type": "debugpy",
             "request": "launch",
-            "args": [
-                "runserver",
-                "0.0.0.0:8001"
-            ],
-            "django": true,
-            "autoStartBrowser": false,
-            "program": "${workspaceFolder}\\backend\\manage.py",
-            "envFile": "${workspaceFolder}/.env.prod.example",
+            "program": "${workspaceFolder}/backend/test_direct_db.py",
+            "args": [],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/backend",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
-                "DEBUG": "False",
-                "ALLOWED_HOSTS": ".onrender.com,algotrader-backend.onrender.com,localhost,127.0.0.1",
-                "CORS_ALLOWED_ORIGINS": "https://algotrader-frontend.onrender.com,http://localhost:3000,http://localhost:5173",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
+                "ENVIRONMENT": "production",
+                "DB_HOST": "dpg-d26hggjuibrs739ss0h0-a.oregon-postgres.render.com",
+                "DB_PORT": "5432",
+                "DB_NAME": "algotrading_60j3",
+                "DB_USER": "algotrading_user",
+                "DB_PASSWORD": "KaVpfEyKnvm5g4buBl5tuizkvqoNYJ1x"
             },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
+            "console": "integratedTerminal"
         },
         {
-            "name": "AlgoTrader Django Migrate",
+            "name": "Setup Database (Local)",
             "type": "debugpy",
             "request": "launch",
-            "args": [
-                "migrate"
-            ],
-            "django": true,
-            "program": "${workspaceFolder}\\backend\\manage.py",
+            "program": "${workspaceFolder}/setup_database.py",
+            "args": [],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
             "env": {
-                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
+                "DJANGO_SETTINGS_MODULE": "backend.settings",
+                "DB_NAME": "postgres",
+                "DB_USER": "postgres",
+                "DB_PASSWORD": "admin@123",
+                "DB_HOST": "localhost",
+                "DB_PORT": "5432",
+                "DEBUG": "True"
             },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
-        },
+            "console": "integratedTerminal"
+        }
+    ],
+    "inputs": [
         {
-            "name": "AlgoTrader Django Makemigrations",
-            "type": "debugpy",
-            "request": "launch",
-            "args": [
-                "makemigrations"
-            ],
-            "django": true,
-            "program": "${workspaceFolder}\\backend\\manage.py",
-            "env": {
-                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
-            },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
-        },
-        {
-            "name": "AlgoTrader Django Shell",
-            "type": "debugpy",
-            "request": "launch",
-            "args": [
-                "shell"
-            ],
-            "django": true,
-            "program": "${workspaceFolder}\\backend\\manage.py",
-            "env": {
-                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
-            },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
-        },
-        {
-            "name": "AlgoTrader Django Collectstatic",
-            "type": "debugpy",
-            "request": "launch",
-            "args": [
-                "collectstatic",
-                "--noinput"
-            ],
-            "django": true,
-            "program": "${workspaceFolder}\\backend\\manage.py",
-            "env": {
-                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
-            },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
-        },
-        {
-            "name": "AlgoTrader Django Create Superuser",
-            "type": "debugpy",
-            "request": "launch",
-            "args": [
-                "createsuperuser"
-            ],
-            "django": true,
-            "program": "${workspaceFolder}\\backend\\manage.py",
-            "env": {
-                "DJANGO_SETTINGS_MODULE": "algotrader.settings",
-                "PYTHONPATH": "${workspaceFolder}\\backend"
-            },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}\\backend"
+            "id": "databaseUrl",
+            "description": "Enter the production DATABASE_URL",
+            "default": "postgresql://user:password@host:port/database",
+            "type": "promptString"
         }
     ]
 }

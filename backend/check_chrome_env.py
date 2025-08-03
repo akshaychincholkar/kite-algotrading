@@ -8,11 +8,15 @@ import os
 import sys
 import subprocess
 import platform
+import logging
+
+# Get logger for chrome environment checks
+logger = logging.getLogger('chrome_env')
 
 
 def check_environment():
     """Check if we're in a production environment"""
-    print("=== Environment Detection ===")
+    logger.info("=== Environment Detection ===")
     
     env_indicators = {
         'RENDER': os.environ.get('RENDER'),
@@ -24,19 +28,19 @@ def check_environment():
     
     production_detected = any(env_indicators.values())
     
-    print(f"Platform: {platform.system()} {platform.release()}")
-    print(f"Python: {sys.version}")
-    print(f"Production environment detected: {production_detected}")
+    logger.info(f"Platform: {platform.system()} {platform.release()}")
+    logger.info(f"Python: {sys.version}")
+    logger.info(f"Production environment detected: {production_detected}")
     
     for key, value in env_indicators.items():
-        print(f"  {key}: {value or 'Not set'}")
+        logger.info(f"  {key}: {value or 'Not set'}")
     
     return production_detected
 
 
 def check_chrome_installation():
     """Check Chrome installation"""
-    print("\n=== Chrome Installation Check ===")
+    logger.info("\n=== Chrome Installation Check ===")
     
     chrome_paths = [
         '/usr/bin/google-chrome',

@@ -13,9 +13,20 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import dj_database_url
 
 # Load environment variables
-load_dotenv()
+# Try to load .env files from multiple locations
+env_files = [
+    Path(__file__).parent.parent / '.env.local',  # Project root .env.local
+    Path(__file__).parent.parent / '.env',        # Project root .env
+    Path(__file__).parent / '.env',               # Backend directory .env
+]
+
+for env_file in env_files:
+    if env_file.exists():
+        load_dotenv(env_file)
+        break
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -86,12 +97,29 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database configuration with separate local and external settings
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if DATABASE_URL:
+    # External database (Render.com or other cloud provider)
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL)
     }
-}
+else:
+    # Local PostgreSQL database
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'postgres'),
+            'USER': os.getenv('DB_USER', 'postgres'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'admin@123'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+            'OPTIONS': {
+                'connect_timeout': 60,
+            }
+        }
+    }
 
 
 # Password validation
