@@ -237,6 +237,9 @@ algotrader.log
 trading_data/
 cache/
 
+# Log directories
+backend/logs/
+
 # API keys and tokens (additional safety)
 *key*
 *token*
