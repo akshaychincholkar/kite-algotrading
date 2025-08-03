@@ -16,12 +16,18 @@ logger = logging.getLogger('chartink')
 
 def setup_driver():
     """Setup Chrome WebDriver with enhanced options"""
+    import os
+    import logging
+    logger = logging.getLogger('chartink')
+    
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
     chrome_options.add_argument('--disable-extensions')
     chrome_options.add_argument('--headless')  # Run in headless mode
+    chrome_options.add_argument('--disable-gpu')  # Additional for production
+    chrome_options.add_argument('--remote-debugging-port=9222')  # Additional for production
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
     
@@ -32,7 +38,27 @@ def setup_driver():
         'disable_encoding': True
     }
     
-    service = Service(ChromeDriverManager().install())
+    # Production environment detection
+    is_production = any([
+        os.environ.get('RENDER'),
+        os.environ.get('RAILWAY_PROJECT_ID'), 
+        os.environ.get('HEROKU_APP_NAME'),
+        '/app' in os.getcwd(),  # Heroku/Render indicator
+    ])
+    
+    if is_production:
+        # Use system ChromeDriver in production (installed via buildpack)
+        try:
+            service = Service()  # Will use system chromedriver
+            logger.info("Using system ChromeDriver for production")
+        except Exception as e:
+            logger.warning(f"System ChromeDriver not found, falling back to WebDriverManager: {e}")
+            service = Service(ChromeDriverManager().install())
+    else:
+        # Use WebDriverManager in development
+        service = Service(ChromeDriverManager().install())
+        logger.info("Using WebDriverManager for development")
+    
     driver = webdriver.Chrome(
         service=service,
         options=chrome_options,
