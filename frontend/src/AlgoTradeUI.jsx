@@ -124,6 +124,31 @@ const AppProvider = () => {
   const paginatedStocks = screenerStocks.slice((stocksPage - 1) * stocksPerPage, stocksPage * stocksPerPage);
   const totalPages = Math.ceil(screenerStocks.length / stocksPerPage);
 
+  // Trade Entries filtering state
+  const currentDate = new Date();
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1); // getMonth() returns 0-11
+  const [showAllEntries, setShowAllEntries] = useState(false);
+
+  // Generate year options (2025 to 2035)
+  const yearOptions = Array.from({ length: 11 }, (_, i) => 2025 + i);
+  
+  // Month options
+  const monthOptions = [
+    { value: 1, label: 'January' },
+    { value: 2, label: 'February' },
+    { value: 3, label: 'March' },
+    { value: 4, label: 'April' },
+    { value: 5, label: 'May' },
+    { value: 6, label: 'June' },
+    { value: 7, label: 'July' },
+    { value: 8, label: 'August' },
+    { value: 9, label: 'September' },
+    { value: 10, label: 'October' },
+    { value: 11, label: 'November' },
+    { value: 12, label: 'December' }
+  ];
+
   // --- Calculated fields for summary stats ---
   const riskPerTrade = capital * risk / 100;
   const totalRisk = riskPerTrade * diversification;
@@ -170,6 +195,21 @@ const AppProvider = () => {
     { id: 0, value: bookedPositive, label: 'Profit', color: '#38a169' },
     { id: 1, value: bookedNegative, label: 'Loss', color: '#dc2626' },
   ];
+
+  // Filter entries based on selected year and month (only if showAllEntries is false)
+  const filteredEntries = showAllEntries 
+    ? entries.map((entry, originalIndex) => ({ ...entry, originalIndex }))
+    : entries
+        .map((entry, originalIndex) => ({ ...entry, originalIndex }))
+        .filter(entry => {
+          if (!entry.entry_date) return false;
+          
+          const entryDate = new Date(entry.entry_date);
+          const entryYear = entryDate.getFullYear();
+          const entryMonth = entryDate.getMonth() + 1; // getMonth() returns 0-11
+          
+          return entryYear === selectedYear && entryMonth === selectedMonth;
+        });
 
   // API helper function
   const getApiUrl = (endpoint) => {
@@ -1309,10 +1349,106 @@ const AppProvider = () => {
               {/* Trade Entries Table Section */}
               <Card sx={{ minWidth: '400px', maxWidth: '1600px', border: '2px solid #222', borderRadius: '12px' }}>
                 <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', mb: 2 }}>
                     <Typography variant="h5" sx={{ color: '#2563eb', fontWeight: 'bold' }}>
                       Trade Entries
                     </Typography>
+                  </Box>
+                  
+                  {/* Filter Controls */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 2, 
+                    mb: 3, 
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between'
+                  }}>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={showAllEntries}
+                            onChange={(e) => setShowAllEntries(e.target.checked)}
+                            sx={{
+                              '& .MuiSwitch-switchBase.Mui-checked': {
+                                color: '#2563eb',
+                              },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                backgroundColor: '#2563eb',
+                              },
+                            }}
+                          />
+                        }
+                        label="Show All Entries"
+                        sx={{ 
+                          '& .MuiFormControlLabel-label': {
+                            color: '#2563eb',
+                            fontWeight: 600,
+                            fontSize: '1.1em'
+                          }
+                        }}
+                      />
+                      
+                      <FormControl size="small" sx={{ minWidth: 120 }}>
+                        <InputLabel sx={{ color: '#2563eb', fontSize: '1rem' }}>Selected Year</InputLabel>
+                        <Select
+                          value={selectedYear}
+                          onChange={(e) => setSelectedYear(e.target.value)}
+                          label="Selected Year"
+                          disabled={showAllEntries}
+                          sx={{
+                            color: '#2563eb',
+                            backgroundColor: showAllEntries ? '#f5f5f5' : 'white',
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#2563eb',
+                            },
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#2563eb',
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#2563eb',
+                            }
+                          }}
+                        >
+                          {yearOptions.map((year) => (
+                            <MenuItem key={year} value={year}>
+                              {year}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      
+                      <FormControl size="small" sx={{ minWidth: 120 }}>
+                        <InputLabel sx={{ color: '#2563eb', fontSize: '1rem' }}>Selected Month</InputLabel>
+                        <Select
+                          value={selectedMonth}
+                          onChange={(e) => setSelectedMonth(e.target.value)}
+                          label="Selected Month"
+                          disabled={showAllEntries}
+                          sx={{
+                            color: '#2563eb',
+                            backgroundColor: showAllEntries ? '#f5f5f5' : 'white',
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#2563eb',
+                            },
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#2563eb',
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#2563eb',
+                            }
+                          }}
+                        >
+                          {monthOptions.map((month) => (
+                            <MenuItem key={month.value} value={month.value}>
+                              {month.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Box>
+                    
                     <Button
                       variant="contained"
                       onClick={handleAddRow}
@@ -1533,8 +1669,10 @@ const AppProvider = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {entries.map((row, idx) => (
-                          <TableRow key={idx} sx={{ 
+                        {filteredEntries.map((row, idx) => {
+                          const originalIndex = row.originalIndex;
+                          return (
+                          <TableRow key={originalIndex} sx={{ 
                             background: '#fff', 
                             borderBottom: '1px solid #222',
                             '& td': { textAlign: 'center' }
@@ -1544,7 +1682,7 @@ const AppProvider = () => {
                               fontSize: { xs: '0.8em', sm: '1em', md: '1.13em' }, 
                               minWidth: { xs: '30px', sm: '40px', md: '50px' }
                             }}>
-                              {idx + 1}
+                              {originalIndex + 1}
                             </TableCell>
                             <TableCell sx={{ minWidth: '120px' }}>
                               <TextField
@@ -1552,7 +1690,7 @@ const AppProvider = () => {
                                 value={row.stock || ""}
                                 onChange={(e) => {
                                   const updated = [...entries];
-                                  updated[idx] = computeRow({ ...row, stock: e.target.value });
+                                  updated[originalIndex] = computeRow({ ...row, stock: e.target.value });
                                   setEntries(updated);
                                 }}
                                 sx={{
@@ -1574,7 +1712,7 @@ const AppProvider = () => {
                                 value={row.cmp || ""}
                                 onChange={(e) => {
                                   const updated = [...entries];
-                                  updated[idx] = computeRow({ ...row, cmp: e.target.value });
+                                  updated[originalIndex] = computeRow({ ...row, cmp: e.target.value });
                                   setEntries(updated);
                                 }}
                                 sx={{
@@ -1595,7 +1733,7 @@ const AppProvider = () => {
                                 value={row.slp || ""}
                                 onChange={(e) => {
                                   const updated = [...entries];
-                                  updated[idx] = computeRow({ ...row, slp: e.target.value });
+                                  updated[originalIndex] = computeRow({ ...row, slp: e.target.value });
                                   setEntries(updated);
                                 }}
                                 sx={{
@@ -1616,7 +1754,7 @@ const AppProvider = () => {
                                 value={row.tgtp || ""}
                                 onChange={(e) => {
                                   const updated = [...entries];
-                                  updated[idx] = computeRow({ ...row, tgtp: e.target.value });
+                                  updated[originalIndex] = computeRow({ ...row, tgtp: e.target.value });
                                   setEntries(updated);
                                 }}
                                 sx={{
@@ -1657,7 +1795,7 @@ const AppProvider = () => {
                                     val = 0;
                                   }
                                   const updated = [...entries];
-                                  updated[idx] = computeRow({ ...row, sb: val });
+                                  updated[originalIndex] = computeRow({ ...row, sb: val });
                                   setEntries(updated);
                                 }}
                                 sx={{
@@ -1680,7 +1818,7 @@ const AppProvider = () => {
                                 value={row.rsi || ""}
                                 onChange={(e) => {
                                   const updated = [...entries];
-                                  updated[idx] = computeRow({ ...row, rsi: e.target.value });
+                                  updated[originalIndex] = computeRow({ ...row, rsi: e.target.value });
                                   setEntries(updated);
                                 }}
                                 sx={{
@@ -1702,7 +1840,7 @@ const AppProvider = () => {
                                 value={row.candle || ""}
                                 onChange={(e) => {
                                   const updated = [...entries];
-                                  updated[idx] = computeRow({ ...row, candle: e.target.value });
+                                  updated[originalIndex] = computeRow({ ...row, candle: e.target.value });
                                   setEntries(updated);
                                 }}
                                 sx={{
@@ -1730,7 +1868,7 @@ const AppProvider = () => {
                                 value={row.volume || ""}
                                 onChange={(e) => {
                                   const updated = [...entries];
-                                  updated[idx] = computeRow({ ...row, volume: e.target.value });
+                                  updated[originalIndex] = computeRow({ ...row, volume: e.target.value });
                                   setEntries(updated);
                                 }}
                                 sx={{
@@ -1752,7 +1890,7 @@ const AppProvider = () => {
                                 value={row.pl || ""}
                                 onChange={(e) => {
                                   const updated = [...entries];
-                                  updated[idx] = computeRow({ ...row, pl: e.target.value });
+                                  updated[originalIndex] = computeRow({ ...row, pl: e.target.value });
                                   setEntries(updated);
                                 }}
                                 sx={{
@@ -1773,7 +1911,7 @@ const AppProvider = () => {
                                 value={row.entry_date ? dayjs(row.entry_date) : null}
                                 onChange={(newValue) => {
                                   const updated = [...entries];
-                                  updated[idx] = computeRow({ 
+                                  updated[originalIndex] = computeRow({ 
                                     ...row, 
                                     entry_date: newValue ? newValue.format('YYYY-MM-DD') : '' 
                                   });
@@ -1802,7 +1940,7 @@ const AppProvider = () => {
                                 value={row.exit_date ? dayjs(row.exit_date) : null}
                                 onChange={(newValue) => {
                                   const updated = [...entries];
-                                  updated[idx] = computeRow({ 
+                                  updated[originalIndex] = computeRow({ 
                                     ...row, 
                                     exit_date: newValue ? newValue.format('YYYY-MM-DD') : '' 
                                   });
@@ -1846,7 +1984,7 @@ const AppProvider = () => {
                                 value={row.remarks || ""}
                                 onChange={(e) => {
                                   const updated = [...entries];
-                                  updated[idx] = computeRow({ ...row, remarks: e.target.value });
+                                  updated[originalIndex] = computeRow({ ...row, remarks: e.target.value });
                                   setEntries(updated);
                                 }}
                                 sx={{
@@ -1866,7 +2004,7 @@ const AppProvider = () => {
                                   <>
                                     <Button
                                       size="small"
-                                      onClick={() => handleBuyRow(row, idx)}
+                                      onClick={() => handleBuyRow(row, originalIndex)}
                                       sx={{
                                         background: '#e3f0ff',
                                         color: '#2563eb',
@@ -1906,7 +2044,7 @@ const AppProvider = () => {
                                     </Button>                                 */}
                                 <Button
                                   size="small"
-                                  onClick={() => handleSaveRow(row, idx)}
+                                  onClick={() => handleSaveRow(row, originalIndex)}
                                   sx={{
                                     background: '#e3f0ff',
                                     color: '#2563eb',
@@ -1924,7 +2062,7 @@ const AppProvider = () => {
                                 </Button>
                                 <Button
                                   size="small"
-                                  onClick={() => handleDeleteRow(row, idx)}
+                                  onClick={() => handleDeleteRow(row, originalIndex)}
                                   sx={{
                                     background: '#e3f0ff',
                                     color: '#2563eb',
@@ -1943,7 +2081,8 @@ const AppProvider = () => {
                               </Box>
                             </TableCell>
                           </TableRow>
-                        ))}
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </Box>
