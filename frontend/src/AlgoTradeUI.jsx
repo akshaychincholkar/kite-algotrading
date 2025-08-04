@@ -37,6 +37,20 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { PieChart } from '@mui/x-charts/PieChart';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  ComposedChart,
+  Bar,
+  Area,
+  AreaChart
+} from 'recharts';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import MenuIcon from "@mui/icons-material/Menu";
@@ -149,6 +163,12 @@ const AppProvider = () => {
     { value: 12, label: 'December' }
   ];
 
+  // Chart state for financial analysis
+  const [selectedStock, setSelectedStock] = useState('');
+  const [chartData, setChartData] = useState([]);
+  const [chartTimeframe, setChartTimeframe] = useState('daily');
+  const [loadingChart, setLoadingChart] = useState(false);
+
   // --- Calculated fields for summary stats ---
   const riskPerTrade = capital * risk / 100;
   const totalRisk = riskPerTrade * diversification;
@@ -210,6 +230,260 @@ const AppProvider = () => {
           
           return entryYear === selectedYear && entryMonth === selectedMonth;
         });
+
+  // Technical indicator calculations
+  const calculateEMA = (data, period) => {
+    const k = 2 / (period + 1);
+    const emaArray = [];
+    
+    if (data.length === 0) return emaArray;
+    
+    emaArray[0] = data[0].close;
+    
+    for (let i = 1; i < data.length; i++) {
+      emaArray[i] = data[i].close * k + emaArray[i - 1] * (1 - k);
+    }
+    
+    return emaArray;
+  };
+
+  const calculateMACD = (data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) => {
+    const fastEMA = calculateEMA(data, fastPeriod);
+    const slowEMA = calculateEMA(data, slowPeriod);
+    
+    const macdLine = fastEMA.map((fast, i) => fast - slowEMA[i]);
+    
+    const signalData = macdLine.map((value, i) => ({ close: value }));
+    const signalLine = calculateEMA(signalData, signalPeriod);
+    
+    const histogram = macdLine.map((macd, i) => macd - (signalLine[i] || 0));
+    
+    return { macdLine, signalLine, histogram };
+  };
+
+  const calculateRSI = (data, period = 13) => {
+    const changes = [];
+    for (let i = 1; i < data.length; i++) {
+      changes.push(data[i].close - data[i - 1].close);
+    }
+    
+    const rsiArray = [];
+    
+    for (let i = period - 1; i < changes.length; i++) {
+      const periodChanges = changes.slice(i - period + 1, i + 1);
+      const gains = periodChanges.filter(change => change > 0);
+      const losses = periodChanges.filter(change => change < 0).map(loss => Math.abs(loss));
+      
+      const avgGain = gains.reduce((sum, gain) => sum + gain, 0) / period;
+      const avgLoss = losses.reduce((sum, loss) => sum + loss, 0) / period;
+      
+      const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+      const rsi = 100 - (100 / (1 + rs));
+      
+      rsiArray.push(rsi);
+    }
+    
+    return rsiArray;
+  };
+
+  const calculateBollingerBands = (data, period = 20, multiplier = 2) => {
+    const sma = [];
+    const upperBand = [];
+    const lowerBand = [];
+    
+    for (let i = period - 1; i < data.length; i++) {
+      const slice = data.slice(i - period + 1, i + 1);
+      const avg = slice.reduce((sum, item) => sum + item.close, 0) / period;
+      
+      const variance = slice.reduce((sum, item) => sum + Math.pow(item.close - avg, 2), 0) / period;
+      const stdDev = Math.sqrt(variance);
+      
+      sma.push(avg);
+      upperBand.push(avg + (stdDev * multiplier));
+      lowerBand.push(avg - (stdDev * multiplier));
+    }
+    
+    return { sma, upperBand, lowerBand };
+  };
+
+  const calculateADX = (data, period = 14) => {
+    // Simplified ADX calculation
+    const tr = [];
+    const plusDM = [];
+    const minusDM = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      const high = data[i].high;
+      const low = data[i].low;
+      const close = data[i].close;
+      const prevHigh = data[i - 1].high;
+      const prevLow = data[i - 1].low;
+      const prevClose = data[i - 1].close;
+      
+      const tr1 = high - low;
+      const tr2 = Math.abs(high - prevClose);
+      const tr3 = Math.abs(low - prevClose);
+      tr.push(Math.max(tr1, tr2, tr3));
+      
+      const upMove = high - prevHigh;
+      const downMove = prevLow - low;
+      
+      plusDM.push(upMove > downMove && upMove > 0 ? upMove : 0);
+      minusDM.push(downMove > upMove && downMove > 0 ? downMove : 0);
+    }
+    
+    // Simplified smoothed calculations
+    const smoothedTR = [];
+    const smoothedPlusDM = [];
+    const smoothedMinusDM = [];
+    
+    let trSum = tr.slice(0, period).reduce((a, b) => a + b, 0);
+    let plusSum = plusDM.slice(0, period).reduce((a, b) => a + b, 0);
+    let minusSum = minusDM.slice(0, period).reduce((a, b) => a + b, 0);
+    
+    smoothedTR.push(trSum);
+    smoothedPlusDM.push(plusSum);
+    smoothedMinusDM.push(minusSum);
+    
+    for (let i = period; i < tr.length; i++) {
+      trSum = trSum - (trSum / period) + tr[i];
+      plusSum = plusSum - (plusSum / period) + plusDM[i];
+      minusSum = minusSum - (minusSum / period) + minusDM[i];
+      
+      smoothedTR.push(trSum);
+      smoothedPlusDM.push(plusSum);
+      smoothedMinusDM.push(minusSum);
+    }
+    
+    const plusDI = smoothedPlusDM.map((plus, i) => (plus / smoothedTR[i]) * 100);
+    const minusDI = smoothedMinusDM.map((minus, i) => (minus / smoothedTR[i]) * 100);
+    const adx = plusDI.map((plus, i) => Math.abs(plus - minusDI[i]) / (plus + minusDI[i]) * 100);
+    
+    return { plusDI, minusDI, adx };
+  };
+
+  // Custom Candlestick component for Recharts
+  const Candlestick = (props) => {
+    const { payload, x, y, width, height } = props;
+    if (!payload) return null;
+
+    const { open, high, low, close } = payload;
+    const isGreen = close > open;
+    const color = isGreen ? '#16a34a' : '#dc2626';
+    
+    const bodyHeight = Math.abs(close - open);
+    const bodyY = Math.min(close, open);
+    const wickTop = high;
+    const wickBottom = low;
+    
+    // Calculate actual pixel positions
+    const candleWidth = Math.max(width * 0.6, 2);
+    const centerX = x + width / 2;
+    
+    // Scale factor to convert price to pixels (simplified)
+    const priceRange = wickTop - wickBottom;
+    const pixelScale = height / priceRange;
+    
+    const wickTopY = y + (wickTop - wickTop) * pixelScale;
+    const wickBottomY = y + (wickTop - wickBottom) * pixelScale;
+    const bodyTopY = y + (wickTop - Math.max(open, close)) * pixelScale;
+    const bodyBottomY = y + (wickTop - Math.min(open, close)) * pixelScale;
+    
+    return (
+      <g>
+        {/* Wick line */}
+        <line
+          x1={centerX}
+          y1={wickTopY}
+          x2={centerX}
+          y2={wickBottomY}
+          stroke={color}
+          strokeWidth={1}
+        />
+        {/* Body rectangle */}
+        <rect
+          x={centerX - candleWidth / 2}
+          y={bodyTopY}
+          width={candleWidth}
+          height={Math.max(bodyBottomY - bodyTopY, 1)}
+          fill={isGreen ? color : color}
+          stroke={color}
+          strokeWidth={1}
+          fillOpacity={isGreen ? 0.8 : 1}
+        />
+      </g>
+    );
+  };
+
+  // Mock data generator for demonstration (replace with actual API call)
+  const generateMockChartData = (symbol) => {
+    const data = [];
+    let basePrice = 100 + Math.random() * 500;
+    
+    for (let i = 0; i < 100; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - (100 - i));
+      
+      const dailyChange = (Math.random() - 0.5) * 20;
+      const open = basePrice;
+      const close = basePrice + dailyChange;
+      const high = Math.max(open, close) + Math.random() * 10;
+      const low = Math.min(open, close) - Math.random() * 10;
+      const volume = Math.floor(Math.random() * 1000000) + 100000;
+      
+      basePrice = close; // Update base price for next iteration
+      
+      data.push({
+        date: date.toISOString().split('T')[0],
+        open: open,
+        high: high,
+        low: low,
+        close: close,
+        volume: volume,
+        symbol: symbol
+      });
+    }
+    
+    // Add technical indicators
+    const ema5 = calculateEMA(data, 5);
+    const ema13 = calculateEMA(data, 13);
+    const ema26 = calculateEMA(data, 26);
+    const macd = calculateMACD(data);
+    const rsi = calculateRSI(data, 13);
+    const bollinger = calculateBollingerBands(data);
+    const adxData = calculateADX(data);
+    
+    return data.map((item, index) => ({
+      ...item,
+      ema5: ema5[index],
+      ema13: ema13[index],
+      ema26: ema26[index],
+      macd: macd.macdLine[index],
+      macdSignal: macd.signalLine[index],
+      macdHistogram: macd.histogram[index],
+      rsi: index >= 12 ? rsi[index - 12] : null,
+      bbUpper: index >= 19 ? bollinger.upperBand[index - 19] : null,
+      bbMiddle: index >= 19 ? bollinger.sma[index - 19] : null,
+      bbLower: index >= 19 ? bollinger.lowerBand[index - 19] : null,
+      adx: index >= 13 ? adxData.adx[index - 13] : null,
+      plusDI: index >= 13 ? adxData.plusDI[index - 13] : null,
+      minusDI: index >= 13 ? adxData.minusDI[index - 13] : null,
+    }));
+  };
+
+  // Function to fetch chart data
+  const fetchChartData = async (symbol) => {
+    setLoadingChart(true);
+    try {
+      // For now, using mock data. Replace with actual API call
+      const data = generateMockChartData(symbol);
+      setChartData(data);
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+    } finally {
+      setLoadingChart(false);
+    }
+  };
 
   // API helper function
   const getApiUrl = (endpoint) => {
@@ -1264,7 +1538,28 @@ const AppProvider = () => {
                                     textAlign: 'center', 
                                     borderRight: '1px solid #222' 
                                   }}>
-                                    {stock.symbol || stock}
+                                    <Button
+                                      variant="text"
+                                      onClick={() => {
+                                        const stockName = stock.symbol || stock;
+                                        setSelectedStock(stockName);
+                                        fetchChartData(stockName);
+                                      }}
+                                      sx={{
+                                        fontSize: { xs: '0.85em', sm: '1.1em' },
+                                        color: '#2563eb',
+                                        fontWeight: 'bold',
+                                        textTransform: 'none',
+                                        padding: 0,
+                                        minWidth: 'auto',
+                                        '&:hover': {
+                                          backgroundColor: 'transparent',
+                                          textDecoration: 'underline'
+                                        }
+                                      }}
+                                    >
+                                      {stock.symbol || stock}
+                                    </Button>
                                   </TableCell>
                                   <TableCell sx={{ 
                                     fontSize: { xs: '0.85em', sm: '1.1em' }, 
@@ -1341,6 +1636,220 @@ const AppProvider = () => {
                           Total stocks: {screenerStocks.length}
                         </Typography>
                       </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Financial Charts Section */}
+                <Card sx={{ flex: 1, minWidth: '600px', border: '2px solid #222', borderRadius: '18px' }}>
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <Typography 
+                      variant="h5" 
+                      gutterBottom 
+                      sx={{ 
+                        color: '#2563eb', 
+                        fontSize: { xs: '1.3em', sm: '1.6em', md: '2em' }, 
+                        fontWeight: 'bold' 
+                      }}
+                    >
+                      Financial Charts
+                    </Typography>
+                    
+                    {selectedStock ? (
+                      <>
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            color: '#2563eb', 
+                            fontSize: { xs: '1.1em', sm: '1.3em' }, 
+                            mb: 2,
+                            fontWeight: 600
+                          }}
+                        >
+                          {selectedStock} - Daily Chart
+                        </Typography>
+
+                        {loadingChart ? (
+                          <Typography sx={{ fontSize: { xs: '0.9em', sm: '1.1em' } }}>Loading chart...</Typography>
+                        ) : chartData.length > 0 ? (
+                          <Box sx={{ width: '100%', height: '600px' }}>
+                            {/* Main Price Chart with Candlesticks, EMAs and Bollinger Bands */}
+                            <ResponsiveContainer width="100%" height="40%">
+                              <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="date" />
+                                <YAxis />
+                                <Tooltip 
+                                  content={({ active, payload, label }) => {
+                                    if (active && payload && payload.length) {
+                                      const data = payload[0].payload;
+                                      const change = data.close - data.open;
+                                      const changePercent = ((change / data.open) * 100).toFixed(2);
+                                      return (
+                                        <div style={{ 
+                                          backgroundColor: 'white', 
+                                          border: '1px solid #ccc', 
+                                          padding: '10px',
+                                          borderRadius: '5px',
+                                          fontSize: '12px'
+                                        }}>
+                                          <p style={{ margin: '2px 0', fontWeight: 'bold' }}>{`${data.symbol} - ${label}`}</p>
+                                          <p style={{ margin: '2px 0', color: '#666' }}>{`Open: ₹${data.open?.toFixed(2)}`}</p>
+                                          <p style={{ margin: '2px 0', color: '#16a34a' }}>{`High: ₹${data.high?.toFixed(2)}`}</p>
+                                          <p style={{ margin: '2px 0', color: '#dc2626' }}>{`Low: ₹${data.low?.toFixed(2)}`}</p>
+                                          <p style={{ margin: '2px 0', color: change >= 0 ? '#16a34a' : '#dc2626', fontWeight: 'bold' }}>
+                                            {`Close: ₹${data.close?.toFixed(2)} (${change >= 0 ? '+' : ''}${change.toFixed(2)} / ${changePercent}%)`}
+                                          </p>
+                                          <p style={{ margin: '2px 0', color: '#8b5cf6' }}>{`Volume: ${data.volume?.toLocaleString()}`}</p>
+                                          {data.ema5 && <p style={{ margin: '2px 0', color: '#dc2626' }}>{`EMA 5: ₹${data.ema5?.toFixed(2)}`}</p>}
+                                          {data.ema13 && <p style={{ margin: '2px 0', color: '#2563eb' }}>{`EMA 13: ₹${data.ema13?.toFixed(2)}`}</p>}
+                                          {data.ema26 && <p style={{ margin: '2px 0', color: '#16a34a' }}>{`EMA 26: ₹${data.ema26?.toFixed(2)}`}</p>}
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  }}
+                                />
+                                <Legend />
+                                
+                                {/* Bollinger Bands background */}
+                                <Area type="monotone" dataKey="bbUpper" stroke="#e5e7eb" fill="#f3f4f6" fillOpacity={0.3} name="BB Upper" />
+                                <Area type="monotone" dataKey="bbLower" stroke="#e5e7eb" fill="#f3f4f6" fillOpacity={0.3} name="BB Lower" />
+                                
+                                {/* EMAs - Technical Indicators */}
+                                <Line type="monotone" dataKey="ema5" stroke="#dc2626" strokeWidth={2} dot={false} name="EMA 5 (Red)" />
+                                <Line type="monotone" dataKey="ema13" stroke="#2563eb" strokeWidth={2} dot={false} name="EMA 13 (Blue)" />
+                                <Line type="monotone" dataKey="ema26" stroke="#16a34a" strokeWidth={2} dot={false} name="EMA 26 (Green)" />
+                                
+                                {/* Bollinger Middle (SMA) */}
+                                <Line type="monotone" dataKey="bbMiddle" stroke="#6b7280" strokeWidth={1.5} strokeDasharray="5 5" dot={false} name="BB Middle (SMA 20)" />
+                                
+                                {/* Candlestick representation using custom shape */}
+                                <Bar 
+                                  dataKey="close" 
+                                  fill={(entry) => entry.close >= entry.open ? '#16a34a' : '#dc2626'}
+                                  shape={(props) => {
+                                    const { payload, x, y, width, height } = props;
+                                    if (!payload) return null;
+                                    
+                                    const { open, high, low, close } = payload;
+                                    const isGreen = close >= open;
+                                    const color = isGreen ? '#16a34a' : '#dc2626';
+                                    
+                                    const candleWidth = Math.max(width * 0.8, 2);
+                                    const centerX = x + width / 2;
+                                    
+                                    // Calculate body dimensions
+                                    const bodyTop = Math.max(open, close);
+                                    const bodyBottom = Math.min(open, close);
+                                    const bodyHeight = Math.abs(close - open);
+                                    
+                                    // Simple scaling for demonstration
+                                    const scale = height / (high - low || 1);
+                                    const wickY1 = y;
+                                    const wickY2 = y + height;
+                                    const bodyY = y + (high - bodyTop) * scale;
+                                    const bodyH = bodyHeight * scale;
+                                    
+                                    return (
+                                      <g>
+                                        {/* High-Low wick */}
+                                        <line
+                                          x1={centerX}
+                                          y1={wickY1}
+                                          x2={centerX}
+                                          y2={wickY2}
+                                          stroke={color}
+                                          strokeWidth={1}
+                                        />
+                                        {/* Open-Close body */}
+                                        <rect
+                                          x={centerX - candleWidth / 2}
+                                          y={bodyY}
+                                          width={candleWidth}
+                                          height={Math.max(bodyH, 1)}
+                                          fill={isGreen ? color : 'white'}
+                                          stroke={color}
+                                          strokeWidth={1}
+                                        />
+                                      </g>
+                                    );
+                                  }}
+                                  name="Candlesticks"
+                                />
+                              </ComposedChart>
+                            </ResponsiveContainer>
+
+                            {/* MACD Chart */}
+                            <ResponsiveContainer width="100%" height="20%">
+                              <ComposedChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="date" />
+                                <YAxis />
+                                <Tooltip formatter={(value, name) => [value?.toFixed(4), name]} />
+                                <Legend />
+                                
+                                <Line type="monotone" dataKey="macd" stroke="#2563eb" strokeWidth={1.5} dot={false} name="MACD" />
+                                <Line type="monotone" dataKey="macdSignal" stroke="#dc2626" strokeWidth={1.5} dot={false} name="Signal" />
+                                <Bar dataKey="macdHistogram" fill="#16a34a" name="Histogram" />
+                              </ComposedChart>
+                            </ResponsiveContainer>
+
+                            {/* Volume Chart */}
+                            <ResponsiveContainer width="100%" height="15%">
+                              <AreaChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="date" />
+                                <YAxis />
+                                <Tooltip formatter={(value, name) => [value?.toLocaleString(), name]} />
+                                <Legend />
+                                
+                                <Area type="monotone" dataKey="volume" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.6} name="Volume" />
+                              </AreaChart>
+                            </ResponsiveContainer>
+
+                            {/* ADX and DI Chart */}
+                            <ResponsiveContainer width="100%" height="15%">
+                              <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="date" />
+                                <YAxis />
+                                <Tooltip formatter={(value, name) => [value?.toFixed(2), name]} />
+                                <Legend />
+                                
+                                <Line type="monotone" dataKey="adx" stroke="#1f2937" strokeWidth={2} dot={false} name="ADX" />
+                                <Line type="monotone" dataKey="plusDI" stroke="#16a34a" strokeWidth={1.5} dot={false} name="+DI" />
+                                <Line type="monotone" dataKey="minusDI" stroke="#dc2626" strokeWidth={1.5} dot={false} name="-DI" />
+                              </LineChart>
+                            </ResponsiveContainer>
+
+                            {/* RSI Chart */}
+                            <ResponsiveContainer width="100%" height="10%">
+                              <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="date" />
+                                <YAxis domain={[0, 100]} />
+                                <Tooltip formatter={(value, name) => [value?.toFixed(2), name]} />
+                                <Legend />
+                                
+                                <Line type="monotone" dataKey="rsi" stroke="#f59e0b" strokeWidth={2} dot={false} name="RSI (13)" />
+                                
+                                {/* RSI levels */}
+                                <Line type="monotone" dataKey={() => 70} stroke="#dc2626" strokeWidth={1} strokeDasharray="5 5" dot={false} name="Overbought (70)" />
+                                <Line type="monotone" dataKey={() => 30} stroke="#16a34a" strokeWidth={1} strokeDasharray="5 5" dot={false} name="Oversold (30)" />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </Box>
+                        ) : (
+                          <Typography color="textSecondary" sx={{ fontSize: { xs: '0.9em', sm: '1.1em' } }}>
+                            No chart data available.
+                          </Typography>
+                        )}
+                      </>
+                    ) : (
+                      <Typography color="textSecondary" sx={{ fontSize: { xs: '0.9em', sm: '1.1em' }, mt: 4 }}>
+                        Click on a stock from the screener to view its financial chart
+                      </Typography>
                     )}
                   </CardContent>
                 </Card>
